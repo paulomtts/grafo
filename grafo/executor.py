@@ -10,10 +10,9 @@ from grafo._internal import logger
 from .components import Chunk, Node
 
 N = TypeVar("N")
-C = TypeVar("C")
 
 
-class TreeExecutor(Generic[N, C]):
+class TreeExecutor(Generic[N]):
     """
     Processes a tree of nodes concurrently. Rules:
     - Each node is processed by a worker.
@@ -38,7 +37,7 @@ class TreeExecutor(Generic[N, C]):
         self._roots = roots or []
 
         self._workers = []
-        self._output: list[Node[N] | Chunk[C]] = []
+        self._output: list[Node[N]] = []
         self._errors = []
 
         self._queue = asyncio.Queue()
@@ -181,8 +180,8 @@ class TreeExecutor(Generic[N, C]):
         for _ in range(len(self._workers)):
             self._queue.put_nowait(None)
 
-    async def run(self) -> list[Node[N] | Chunk[C]]:
-        """
+    async def run(self) -> list[Node[N] | Chunk[N]]:
+        """C = TypeVar("C")
         Runs the tree with the specified number of workers.
         """
         levels = []
@@ -215,7 +214,7 @@ class TreeExecutor(Generic[N, C]):
     async def yielding(
         self,
         latency: float = 0.01,
-    ) -> AsyncGenerator[Node[N] | Chunk[C], None]:
+    ) -> AsyncGenerator[Node[N] | Chunk[N], None]:
         """
         Runs the tree with the specified number of workers and yields results as they are set.
         """

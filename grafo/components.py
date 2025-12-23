@@ -2,6 +2,7 @@ import asyncio
 import inspect
 import time
 from typing import (
+    Type,
     get_args,
     Any,
     AsyncGenerator,
@@ -264,6 +265,35 @@ class Node(Generic[N]):
         if self.on_after_run:
             await self._run_callback(self.on_after_run)
 
+    def _get_expected_type(self) -> Optional[Type[N]]:
+        """Extract the expected type from the node's generic parameters."""
+        # Try multiple methods to get the type
+        if hasattr(self, "__orig_class__"):
+            args = get_args(self.__orig_class__)
+            if args:
+                return args[0]
+
+        # Check if class was parameterized at definition time
+        if hasattr(type(self), "__args__"):
+            args = get_args(type(self))
+            if args:
+                return args[0]
+
+        return None
+
+    def _validate_type(self, value: Any) -> None:
+        expected_type = self._get_expected_type()
+        if expected_type is None or expected_type is Any:
+            logger.warning(
+                f"Node {self.uuid} has no expected type. Skipping type validation."
+            )
+            return
+
+        if not isinstance(value, expected_type):
+            raise MismatchChunkType(
+                f"Node {self} yielded an output of type {type(value)} but expected {expected_type}"
+            )
+
     @safe_execution
     async def _run(self) -> Any:
         """
@@ -273,7 +303,9 @@ class Node(Generic[N]):
             start_time = time.time()
             self._is_running = True
             runtime_kwargs = self._eval_kwargs(self.kwargs)
-            self._output = await self.coroutine(**runtime_kwargs)
+            result = await self.coroutine(**runtime_kwargs)
+            self._validate_type(result)
+            self._output = result
             self._event.set()
         finally:
             self._is_running = False
@@ -297,15 +329,7 @@ class Node(Generic[N]):
                 if not isinstance(result, Chunk):
                     yield Chunk[N](self.uuid, result)
                 else:
-                    # TODO: check this
-                    if hasattr(self, "__orig_class__"):
-                        runtime_type = get_args(self.__orig_class__)[0]  # type: ignore
-                        if runtime_type != Any and not isinstance(
-                            result.output, runtime_type
-                        ):
-                            raise MismatchChunkType(
-                                f"Node {self} yielded a chunk of type {type(result.output)} but expected {runtime_type}"
-                            )
+                    self._validate_type(result.output)
                     yield result
 
             self._event.set()

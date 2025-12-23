@@ -1,72 +1,80 @@
-## What ##
-A simple library for building runnable async trees. Trees are a web of interconnected Nodes, which contain code to be run. The number of workers is automatically managed (optional).
+A simple library for building runnable async trees. Trees are a web of interconnected Nodes, which contain code to be run. **A node can only start executing once all it's parents have finished running.**
+
+## Features
+- The number of workers is automatically managed - although you can parametrize this
+- Trees can have any shape - including multiple roots - and can be dynamically altered during their runtime
+- State can be passed between nodes manually (as lambda functions) or via forwarding
+- Yielding coroutines produce `Chunk` objects that wrap intermediate results with the node's UUID
+
+## Installation
+- `pip install grafo` to install on your environment
+- `pytest` to run tests, add `-s` flag for tests to run `print` statements
 
 ## Use
 
-**Building a tree with the `|` operator**
+**Basic tree execution**
 ```python
-# Declare your nodes
-root_node = Node(...)
-child1 = Node(...)
-child2 = Node(...)
-grandchild = Node(...)
+async def my_coroutine():
+    return "result"
 
-# Set the layout
-nodes = {
-    root_node: {
-        child1: [grandchild],
-        child2: [grandchild], # grandchild_node will wait for child1 and child2 to complete before running
-    }
-}
+root_node = Node(coroutine=my_coroutine, uuid="root")
+child_node = Node(coroutine=my_coroutine, uuid="child")
 
-# Use the '|' operator to connect the nodes
-executor = TreeExecutor(logger=logger)
-tree = executor | nodes
-result = await tree.run()
+await root_node.connect(child_node)
+
+executor = TreeExecutor(uuid="My Tree", roots=[root_node])
+result = await executor.run()
 ```
 
-**Connecting nodes manually**
+**Yielding intermediate results**
 ```python
-root_node = Node(...)
-child1 = Node(...)
+async def yielding_coroutine():
+    for i in range(3):
+        yield f"progress {i}"
+    yield "completed"
 
-await root_node.connect(child1)
+node = Node(coroutine=yielding_coroutine)
+executor = TreeExecutor(roots=[node])
+
+async for item in executor.yielding():
+    if isinstance(item, Node):
+        print(f"Node {item.uuid} completed")
+    else:  # Chunk
+        print(f"Intermediate: {item.output}")
 ```
 
-
-**Evaluating coroutine kwargs during runtime**
+**Evaluating coroutine kwargs during runtime (manual forwarding)**
 ```python
 node = Node(
-    coroutine=my_coroutine
+    coroutine=my_coroutine,
     kwargs=dict(
-        my_arg=lambda: my_arg
+        my_arg=lambda: get_dynamic_value()
     )
 )
 ```
 
-**Altering a tree during runtime**
-updated example coming later
+**Forwarding output between nodes (automatic forwarding)**
+```python
+async def producer():
+    return "data"
 
-Powered by `asyncio` (https://docs.python.org/3/library/asyncio.html)
+async def consumer(data: str):
+    return f"processed_{data}"
 
-## How ##
-- You have a tree of interconected `Nodes` and an `asyncio.Queue()`
-- Upon each Node's execution, it removes itself from the queue and enqueues its children up next
+node_a = Node(coroutine=producer, uuid="producer")
+node_b = Node(coroutine=consumer, uuid="consumer")
 
-## Axioms ##
-1) Children start running as soon as all their parent's are finished.
-2) There's no passing of state between nodes - you can handle that however you see fit
+await node_a.connect(node_b, forward_as="data")
+# node_b will receive node_a's output as the 'data' argument
+```
 
-## Important ##
-- Node properties are generally accessible, but are immutable during a node's runtime (do not confuse with the tree's runtime).
-- Coroutines and callbacks will always receive the `node` as their first (positional) argument. Everything else if a `keyword argument`.
-- `on_before_run` and `on_after_run` callbacks must be asynchronous
+**Type validation with generics**
+```python
+node = Node[str](coroutine=my_string_coroutine)
+# The node will validate that the coroutine returns a string
+```
 
-## Installation ##
-- `pip install grafo` to install on your environment
-- `pytest` to run tests, add `-s` flag for tests to run `print` statements
-
-## Zen ##
-1. Follow established names: a Node is a Node.
+## Developer's Zen
+1. Follow established nomenclature: a Node is a Node.
 2. Syntax sugar is sweet in moderation.
 3. Give the programmer granular control.

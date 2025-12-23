@@ -19,6 +19,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "bump2version>=1.0.1",
     "pytest-asyncio>=0.16.0",
     "pytest>=7.0.1",
 ]
