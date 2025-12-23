@@ -22,5 +22,6 @@ dependencies = [
     "bump2version>=1.0.1",
     "pytest-asyncio>=0.16.0",
     "pytest>=7.0.1",
+    "ruff>=0.0.17",
 ]
 requires-python = ">=3.6"
