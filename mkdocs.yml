@@ -1,9 +1,9 @@
 site_name: Grafo
 site_description: A simple library for building runnable async trees
 site_author: Paulo Mattos
-site_url: https://github.com/HappyLoop/grafo
-repo_url: https://github.com/HappyLoop/grafo
-repo_name: HappyLoop/grafo
+site_url: https://github.com/paulomtts/grafo
+repo_url: https://github.com/paulomtts/grafo
+repo_name: paulomtts/grafo
 
 theme:
   name: material
@@ -23,7 +23,6 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   features:
-    - navigation.tabs
     - navigation.sections
     - navigation.expand
     - navigation.top
@@ -81,7 +80,3 @@ nav:
     - TreeExecutor: api-reference/executor.md
     - Chunk: api-reference/chunk.md
     - Exceptions: api-reference/exceptions.md
-  - Examples:
-    - Common Patterns: examples/common-patterns.md
-    - Real-World Use Cases: examples/use-cases.md
-  - Contributing: contributing.md

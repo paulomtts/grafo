@@ -10,7 +10,7 @@ readme = "readme.md"
 authors = [
     { name = "@paulomtts", email = "paulomtts@outlook.com" }
 ]
-urls = { "Homepage" = "https://github.com/HappyLoop/grafo" }
+urls = { "Homepage" = "https://github.com/paulomtts/grafo" }
 license = { text = "MIT" }
 keywords = ["asynchronous", "trees", "library"]
 classifiers = [

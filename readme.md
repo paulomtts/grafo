@@ -74,6 +74,19 @@ node = Node[str](coroutine=my_string_coroutine)
 # The node will validate that the coroutine returns a string
 ```
 
+## Documentation
+
+Full documentation is available at [https://paulomtts.github.io/grafo/](httppaulomttsUSERNAME.github.io/grafo/)
+
+To build the documentation locally:
+
+```bash
+pip install mkdocs mkdocs-material "mkdocstrings[python]"
+mkdocs serve
+```
+
+Then visit `http://localhost:8000`
+
 ## Developer's Zen
 1. Follow established nomenclature: a Node is a Node.
 2. Syntax sugar is sweet in moderation.

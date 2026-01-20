@@ -95,4 +95,4 @@ asyncio.run(main())
 
 ## License
 
-Grafo is released under the MIT License. See the [LICENSE](https://github.com/HappyLoop/grafo/blob/main/LICENSE.txt) file for details.
+Grafo is released under the MIT License.

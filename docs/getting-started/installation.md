@@ -12,33 +12,6 @@ The simplest way to install Grafo is via pip:
 pip install grafo
 ```
 
-## Install from Source
-
-To install the latest development version from GitHub:
-
-```bash
-git clone https://github.com/HappyLoop/grafo.git
-cd grafo
-pip install -e .
-```
-
-## Development Installation
-
-If you want to contribute to Grafo or run tests, install with development dependencies:
-
-```bash
-git clone https://github.com/HappyLoop/grafo.git
-cd grafo
-pip install -e ".[dev]"
-```
-
-This installs additional packages:
-
-- `pytest` - Testing framework
-- `pytest-asyncio` - Async test support
-- `ruff` - Code linting
-- `bump2version` - Version management
-
 ## Verify Installation
 
 Verify that Grafo is installed correctly:
@@ -64,20 +37,6 @@ async def main():
     print(node.output)  # Should print: Hello, Grafo!
 
 asyncio.run(main())
-```
-
-## Running Tests
-
-After installing from source, you can run the test suite:
-
-```bash
-pytest
-```
-
-Add the `-s` flag to see print statements during test execution:
-
-```bash
-pytest -s
 ```
 
 ## Next Steps
