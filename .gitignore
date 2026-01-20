@@ -2,6 +2,9 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 
 ### Python ###
+.ruff_cache/
+.venv/
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

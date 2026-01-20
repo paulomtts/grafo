@@ -1,0 +1,87 @@
+site_name: Grafo
+site_description: A simple library for building runnable async trees
+site_author: Paulo Mattos
+site_url: https://github.com/HappyLoop/grafo
+repo_url: https://github.com/HappyLoop/grafo
+repo_name: HappyLoop/grafo
+
+theme:
+  name: material
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: google
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            separate_signature: true
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: getting-started/installation.md
+    - Quick Start: getting-started/quick-start.md
+    - Core Concepts: getting-started/core-concepts.md
+  - User Guide:
+    - Basic Usage: user-guide/basic-usage.md
+    - Building Trees: user-guide/building-trees.md
+    - Forwarding Data: user-guide/forwarding-data.md
+    - Yielding Results: user-guide/yielding-results.md
+    - Type Validation: user-guide/type-validation.md
+    - Event Callbacks: user-guide/event-callbacks.md
+    - Error Handling: user-guide/error-handling.md
+  - API Reference:
+    - Node: api-reference/node.md
+    - TreeExecutor: api-reference/executor.md
+    - Chunk: api-reference/chunk.md
+    - Exceptions: api-reference/exceptions.md
+  - Examples:
+    - Common Patterns: examples/common-patterns.md
+    - Real-World Use Cases: examples/use-cases.md
+  - Contributing: contributing.md

@@ -25,3 +25,10 @@ dependencies = [
     "ruff>=0.0.17",
 ]
 requires-python = ">=3.6"
+
+[tool.setuptools]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["grafo*"]
+exclude = ["site*", "tests*"]
