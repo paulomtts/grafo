@@ -2,7 +2,7 @@
 
 ## Requirements
 
-Grafo requires Python 3.6 or higher.
+Grafo requires Python 3.10 or higher.
 
 ## Install from PyPI
 
