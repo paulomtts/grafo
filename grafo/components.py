@@ -21,6 +21,8 @@ from grafo._internal import (
     logger,
 )
 from grafo.errors import (
+    AutoForwardError,
+    ForwardingParameterError,
     ForwardingOverrideError,
     MismatchChunkType,
     NotAsyncCallableError,
@@ -45,6 +47,8 @@ def safe_execution(func: Callable[..., Any]) -> Callable[..., Any]:
 
 N = TypeVar("N")
 
+_AUTO_FORWARD_SENTINEL = object()
+
 
 class Node(Generic[N]):
     """
@@ -67,6 +71,8 @@ class Node(Generic[N]):
 
     **Important:** All coroutines and callbacks are automatically called with the node instance (self) as the first (positional) argument.
     """
+
+    AUTO = _AUTO_FORWARD_SENTINEL
 
     def __init__(
         self,
@@ -134,6 +140,43 @@ class Node(Generic[N]):
             )
         super().__setattr__(name, value)
 
+    def _accepts_kwargs(self) -> bool:
+        signature = inspect.signature(self.coroutine)
+        return any(
+            param.kind == inspect.Parameter.VAR_KEYWORD
+            for param in signature.parameters.values()
+        )
+
+    def _validate_forward_param_name(self, param_name: str) -> None:
+        if self._accepts_kwargs():
+            return
+        signature = inspect.signature(self.coroutine)
+        if param_name not in signature.parameters:
+            raise ForwardingParameterError(
+                f"{self} cannot accept forwarded param '{param_name}'."
+            )
+
+    @staticmethod
+    def _infer_auto_forward_param_name(child: "Node") -> str:
+        signature = inspect.signature(child.coroutine)
+        eligible_param_names: list[str] = []
+        for param_name, param in signature.parameters.items():
+            if param.kind not in (
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                inspect.Parameter.KEYWORD_ONLY,
+            ):
+                continue
+            if param_name in child.kwargs:
+                continue
+            eligible_param_names.append(param_name)
+
+        if len(eligible_param_names) == 1:
+            return eligible_param_names[0]
+
+        raise AutoForwardError(
+            f"Cannot resolve Node.AUTO for {child}. Eligible params: {eligible_param_names}"
+        )
+
     @property
     def output(self) -> N | None:
         if inspect.isasyncgenfunction(self.coroutine):
@@ -195,16 +238,20 @@ class Node(Generic[N]):
     async def connect(
         self,
         child: "Node",
-        forward_as: Optional[str] = None,
-        on_before_forward: tuple[OnForwardCallable, Optional[dict[str, Any]]]
-        | None = None,
+        *,
+        forward: str | object | None = None,
+        on_before_forward: (
+            OnForwardCallable
+            | tuple[OnForwardCallable, Optional[dict[str, Any]]]
+            | None
+        ) = None,
     ):
         """
         Connects a child to this node.
 
         :param child: The child node to connect.
-        :param forward_as: Optional; the name of the argument to forward the output to.
-        :param on_before_forward: Optional; a tuple (callback, fixed_kwargs) triggered before the output is forwarded to the child.
+        :param forward: Optional; the name of the argument to forward the output to, or Node.AUTO.
+        :param on_before_forward: Optional; either a callback or a tuple (callback, fixed_kwargs) triggered before the output is forwarded to the child.
 
         >>> async def node_a_coroutine():
         ...     return 1
@@ -214,7 +261,7 @@ class Node(Generic[N]):
         ...     return output + 1
         >>> node_a = Node(uuid="nodeA", coroutine=node_a_coroutine)
         >>> node_b = Node(uuid="nodeB", coroutine=node_b_coroutine)
-        >>> await node_a.connect(node_b, forward_as="output", on_before_forward=(on_before_forward, {}))
+        >>> await node_a.connect(node_b, forward="output", on_before_forward=on_before_forward)
         """
         self.children.append(child)
         child._add_event(self._event)
@@ -222,8 +269,41 @@ class Node(Generic[N]):
             child.set_level(self.metadata.level + 1)
         if self.on_connect:
             await self._run_callback(self.on_connect)
-        if forward_as:
-            self._forward_map[child.uuid] = (forward_as, on_before_forward)
+
+        if forward is None:
+            return
+
+        if forward is Node.AUTO:
+            forward_param_name = Node._infer_auto_forward_param_name(child)
+        elif isinstance(forward, str):
+            forward_param_name = forward
+        else:
+            raise TypeError(
+                "forward must be a str, Node.AUTO, or None."
+            )
+
+        if forward_param_name in child.kwargs:
+            raise ForwardingOverrideError(
+                f"{self} is trying to forward its output as `{forward_param_name}` to {child} but it already has an argument with that name."
+            )
+        child._validate_forward_param_name(forward_param_name)
+        normalized_on_before_forward: Optional[
+            tuple[OnForwardCallable, Optional[dict[str, Any]]]
+        ] = None
+        if on_before_forward is not None:
+            if isinstance(on_before_forward, tuple):
+                if len(on_before_forward) != 2:
+                    raise TypeError(
+                        "on_before_forward must be a callback or a tuple (callback, fixed_kwargs)."
+                    )
+                normalized_on_before_forward = on_before_forward
+            else:
+                normalized_on_before_forward = (on_before_forward, None)
+
+        self._forward_map[child.uuid] = (
+            forward_param_name,
+            normalized_on_before_forward,
+        )
 
     async def disconnect(self, child: "Node"):
         """
@@ -267,13 +347,11 @@ class Node(Generic[N]):
 
     def _get_expected_type(self) -> Optional[Type[N]]:
         """Extract the expected type from the node's generic parameters."""
-        # Try multiple methods to get the type
         if hasattr(self, "__orig_class__"):
             args = get_args(self.__orig_class__)
             if args:
                 return args[0]
 
-        # Check if class was parameterized at definition time
         if hasattr(type(self), "__args__"):
             args = get_args(type(self))
             if args:
@@ -356,10 +434,55 @@ class Node(Generic[N]):
                 if inspect.isasyncgenfunction(self.coroutine):
                     forward_data = self._aggregated_output
                 if on_before_forward:
-                    forward_data = await self._run_callback(
-                        on_before_forward, forward_data=forward_data
+                    forward_data = await self._run_on_before_forward_callback(
+                        on_before_forward, forward_data
                     )
                 child.kwargs[forward_as] = forward_data
+
+    async def _run_on_before_forward_callback(
+        self,
+        prop: tuple[OnForwardCallable, Optional[dict[str, Any]]],
+        forward_data: Any,
+    ) -> Any:
+        callback, fixed_kwargs = prop
+        if not inspect.iscoroutinefunction(callback):
+            raise NotAsyncCallableError("Callback must be a coroutine function")
+
+        runtime_kwargs = self._eval_kwargs(fixed_kwargs or {})
+        signature = inspect.signature(callback)
+        parameters = signature.parameters
+
+        has_var_keyword = any(
+            param.kind == inspect.Parameter.VAR_KEYWORD
+            for param in parameters.values()
+        )
+        has_var_positional = any(
+            param.kind == inspect.Parameter.VAR_POSITIONAL
+            for param in parameters.values()
+        )
+        has_positional_slot = any(
+            param.kind
+            in (
+                inspect.Parameter.POSITIONAL_ONLY,
+                inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            )
+            for param in parameters.values()
+        )
+
+        if has_var_positional or has_positional_slot:
+            return await callback(forward_data, **runtime_kwargs)
+
+        forward_data_param = parameters.get("forward_data")
+        if has_var_keyword or (
+            forward_data_param is not None
+            and forward_data_param.kind == inspect.Parameter.KEYWORD_ONLY
+        ):
+            return await callback(forward_data=forward_data, **runtime_kwargs)
+
+        raise TypeError(
+            "on_before_forward callback must accept forwarded data as a positional argument "
+            "or as a keyword-only argument named 'forward_data'."
+        )
 
     async def run(self) -> None:
         """

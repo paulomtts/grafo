@@ -40,7 +40,7 @@ await parent.connect(child)
 ### With Forwarding
 
 ```python
-await parent.connect(child, forward_as="input_param")
+await parent.connect(child, forward="input_param")
 ```
 
 ### Multiple Children (Parallel)
@@ -55,8 +55,8 @@ await parent.connect(child_c)
 ### Multiple Parents (Fan-in)
 
 ```python
-await parent_a.connect(child, forward_as="param_a")
-await parent_b.connect(child, forward_as="param_b")
+await parent_a.connect(child, forward="param_a")
+await parent_b.connect(child, forward="param_b")
 # Child waits for BOTH parents before running
 ```
 

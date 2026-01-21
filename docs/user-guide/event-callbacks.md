@@ -81,15 +81,15 @@ node = Node(
 ### on_before_forward
 
 Passed during `connect()`, can transform forwarded values:
+If you don’t need extra kwargs, you can pass the coroutine directly; it will receive only the forwarded value.
 
 ```python
-async def transform_forward(parent: Node, child: Node, value: Any, **kwargs) -> Any:
-    multiplier = kwargs.get("multiplier", 1)
+async def transform_forward(value: Any, multiplier: int = 1) -> Any:
     return value * multiplier
 
 await parent.connect(
     child,
-    forward_as="data",
+    forward="data",
     on_before_forward=(transform_forward, {"multiplier": 2})
 )
 ```

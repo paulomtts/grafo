@@ -157,7 +157,7 @@ class ForwardingOverrideError(Exception):
 
 ### When Raised
 
-- Using `forward_as="param"` when `param` is already in the node's kwargs
+- Using `forward="param"` when `param` is already in the node's kwargs
 
 ### Example
 
@@ -182,7 +182,7 @@ child = Node(
 
 try:
     # Try to forward to the same parameter
-    await parent.connect(child, forward_as="value")
+    await parent.connect(child, forward="value")
 except ForwardingOverrideError as e:
     print(f"Forwarding conflict: {e}")
 ```
@@ -193,7 +193,7 @@ except ForwardingOverrideError as e:
 
 ```python
 child = Node(coroutine=consumer, uuid="child")
-await parent.connect(child, forward_as="value")
+await parent.connect(child, forward="value")
 ```
 
 **Option 2**: Use a different parameter name
@@ -208,7 +208,7 @@ child = Node(
     kwargs=dict(value="preset_value")
 )
 
-await parent.connect(child, forward_as="other_value")
+await parent.connect(child, forward="other_value")
 ```
 
 **Option 3**: Use manual forwarding with lambda
@@ -222,7 +222,7 @@ child = Node(
     )
 )
 
-await parent.connect(child)  # No forward_as
+await parent.connect(child)  # No forwarding
 ```
 
 ---
@@ -430,7 +430,7 @@ async def safe_execution_example():
         node_b = Node[str](coroutine=task_b, uuid="b")
 
         # Connect with forwarding
-        await node_a.connect(node_b, forward_as="data")
+        await node_a.connect(node_b, forward="data")
 
         # Execute
         executor = TreeExecutor(uuid="Safe Tree", roots=[node_a])

@@ -441,6 +441,9 @@ Leaf nodes: ['aggregator']
 
 ### Latency Tuning
 
+!!! tip "Latency tuning"
+    Lower latency is more responsive but uses more CPU. Higher latency reduces CPU usage.
+
 ```python
 # High responsiveness (more CPU)
 async for item in executor.yielding(latency=0.05):

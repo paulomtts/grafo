@@ -151,19 +151,24 @@ async def connect(
     self,
     target: Node,
     *,
-    forward_as: Optional[str] = None,
-    on_before_forward: Optional[OnForwardCallable] = None
+    forward: Optional[Union[str, Node.AUTO]] = None,
+    on_before_forward: Optional[
+        Union[
+            OnForwardCallable,
+            tuple[OnForwardCallable, Optional[dict[str, Any]]],
+        ]
+    ] = None
 ) -> None:
     """
     Connect this node to a child node.
 
     Args:
         target: The child node to connect to
-        forward_as: Parameter name to forward this node's output to
-        on_before_forward: Async callback to transform forwarded value
+        forward: Optional forwarding target. Use a string or `Node.AUTO`.
+        on_before_forward: Optional callback (or `(callback, fixed_kwargs)`) to transform the forwarded value.
 
     Raises:
-        ForwardingOverrideError: If forward_as conflicts with existing kwarg
+        ForwardingOverrideError: If forwarding conflicts with existing kwarg
         SafeExecutionError: If node is currently running
     """
 ```
@@ -172,14 +177,16 @@ async def connect(
 ```python
 await parent.connect(child)  # Basic connection
 
-await parent.connect(child, forward_as="data")  # With forwarding
+await parent.connect(child, forward="data")  # With forwarding
 
-async def transform(parent, child, value):
+await parent.connect(child, forward=Node.AUTO)  # AUTO (single-input children)
+
+async def transform(value):
     return value.upper()
 
 await parent.connect(
     child,
-    forward_as="data",
+    forward="data",
     on_before_forward=transform
 )
 ```
@@ -336,13 +343,13 @@ async def on_after_run_callback(node: Node) -> None:
 
 ```python
 async def on_before_forward_callback(
-    parent: Node,
-    child: Node,
-    value: Any
+    value: Any,
+    **kwargs: Any
 ) -> Any:
     """
     Called before forwarding value to child.
-    Can transform the value.
+    Receives the forwarded value (positional) plus any `fixed_kwargs` if provided.
+    Alternatively, you can declare the parameter as keyword-only `forward_data`.
     """
 ```
 
@@ -400,8 +407,8 @@ async def main():
     )
 
     # Build pipeline
-    await extractor.connect(transformer, forward_as="data")
-    await transformer.connect(loader, forward_as="data")
+    await extractor.connect(transformer, forward="data")
+    await transformer.connect(loader, forward="data")
 
     # Execute
     executor = TreeExecutor(uuid="ETL Pipeline", roots=[extractor])

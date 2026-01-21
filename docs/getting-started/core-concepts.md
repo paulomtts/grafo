@@ -12,7 +12,8 @@ A **Node** wraps an async coroutine function as a unit of work in your tree. Eac
 - Waits for all parents before executing
 - Stores output and execution metadata
 
-**Key principle**: A node only runs after ALL its parents complete.
+!!! info "Key principle"
+    A node only runs after **all** its parents complete.
 
 ## Trees
 
@@ -42,7 +43,7 @@ Workers scale automatically based on the queue - no manual configuration needed.
 
 Pass data between nodes using:
 
-- **Automatic forwarding**: Specify parameter mapping with `forward_as`
+- **Automatic forwarding**: Specify parameter mapping with `forward`
 - **Manual forwarding**: Use lambda functions for dynamic evaluation
 
 Choose automatic for simple pass-through, manual for transformations.

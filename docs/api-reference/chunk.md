@@ -127,7 +127,8 @@ async for item in executor.yielding():
 
 ## Immutability
 
-Chunks are frozen dataclasses and cannot be modified:
+!!! note "Immutability"
+    `Chunk` is a frozen dataclass and cannot be modified.
 
 ```python
 async for item in executor.yielding():

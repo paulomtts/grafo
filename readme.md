@@ -64,7 +64,7 @@ async def consumer(data: str):
 node_a = Node(coroutine=producer, uuid="producer")
 node_b = Node(coroutine=consumer, uuid="consumer")
 
-await node_a.connect(node_b, forward_as="data")
+await node_a.connect(node_b, forward="data")
 # node_b will receive node_a's output as the 'data' argument
 ```
 

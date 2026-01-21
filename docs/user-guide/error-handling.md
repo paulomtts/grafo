@@ -134,19 +134,21 @@ node = Node(
 Validate before forwarding:
 
 ```python
-async def validate_forward(parent: Node, child: Node, value: Any, required_keys: list) -> Any:
+async def validate_forward(value: Any, required_keys: list) -> Any:
     if not isinstance(value, dict):
-        raise ValueError(f"Invalid data from {parent.uuid}")
+        raise ValueError("Invalid data")
     if not all(k in value for k in required_keys):
         raise ValueError(f"Missing required keys: {required_keys}")
     return value
 
 await parent.connect(
     child,
-    forward_as="data",
+    forward="data",
     on_before_forward=(validate_forward, {"required_keys": ["id", "name"]})
 )
 ```
+
+If you don’t need extra kwargs, you can pass `on_before_forward=validate_forward` directly.
 
 ## Error Handling in Yielding
 
@@ -172,7 +174,7 @@ from grafo.errors import ForwardingOverrideError
 
 node = Node(coroutine=consumer, kwargs=dict(value="preset"))
 try:
-    await parent.connect(node, forward_as="value")
+    await parent.connect(node, forward="value")
 except ForwardingOverrideError:
     # Can't override existing kwarg
     pass

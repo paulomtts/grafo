@@ -2,6 +2,7 @@ import pytest
 
 from grafo import TreeExecutor, Node
 from grafo._internal import logger
+from grafo.errors import AutoForwardError, ForwardingOverrideError, ForwardingParameterError
 
 
 @pytest.mark.asyncio
@@ -46,8 +47,8 @@ async def test_forwarding_success():
     node_c.kwargs["existing_value"] = "original_value"
 
     # Connect the nodes with forwarding: A -> B -> C
-    await node_a.connect(node_b, forward_as="data_from_A")
-    await node_b.connect(node_c, forward_as="data_from_B")
+    await node_a.connect(node_b, forward="data_from_A")
+    await node_b.connect(node_c, forward="data_from_B")
 
     # Create executor and run the tree
     executor = TreeExecutor(uuid="Forwarding Success Test", roots=[node_a])
@@ -66,6 +67,71 @@ async def test_forwarding_success():
     # Verify the final state of node C's kwargs
     assert node_c.kwargs["data_from_B"] == "processed_data_from_A"
     assert node_c.kwargs["existing_value"] == "original_value"
+
+
+@pytest.mark.asyncio
+async def test_forwarding_invalid_param_fails_at_connect():
+    async def producer():
+        return "data"
+
+    async def consumer(expected_param: str):
+        return expected_param
+
+    parent = Node(uuid="parent", coroutine=producer)
+    child = Node(uuid="child", coroutine=consumer)
+
+    with pytest.raises(ForwardingParameterError):
+        await parent.connect(child, forward="wrong_param")
+
+
+@pytest.mark.asyncio
+async def test_forwarding_param_allowed_with_kwargs_sink():
+    async def producer():
+        return "data"
+
+    async def consumer(**kwargs):
+        return kwargs["anything"]
+
+    parent = Node(uuid="parent", coroutine=producer)
+    child = Node(uuid="child", coroutine=consumer)
+
+    await parent.connect(child, forward="anything")
+    executor = TreeExecutor(uuid="kwargs sink", roots=[parent])
+    await executor.run()
+    assert child.kwargs["anything"] == "data"
+
+
+@pytest.mark.asyncio
+async def test_forwarding_auto_infers_single_param():
+    async def producer():
+        return "data"
+
+    async def consumer(only_param: str):
+        return only_param
+
+    parent = Node(uuid="parent", coroutine=producer)
+    child = Node(uuid="child", coroutine=consumer)
+
+    await parent.connect(child, forward=Node.AUTO)
+    executor = TreeExecutor(uuid="auto infer", roots=[parent])
+    await executor.run()
+    assert child.kwargs["only_param"] == "data"
+
+
+@pytest.mark.asyncio
+async def test_forwarding_auto_ambiguous_raises():
+    async def producer():
+        return "data"
+
+    async def consumer(first: str, second: str):
+        return f"{first}{second}"
+
+    parent = Node(uuid="parent", coroutine=producer)
+    child = Node(uuid="child", coroutine=consumer)
+
+    with pytest.raises(AutoForwardError):
+        await parent.connect(child, forward=Node.AUTO)
+
 
 
 @pytest.mark.asyncio
@@ -110,25 +176,11 @@ async def test_forwarding_conflict_error():
     node_c.kwargs["data_from_B"] = "will_raise_error"
 
     # Connect the nodes with forwarding: A -> B -> C
-    await node_a.connect(node_b, forward_as="data_from_A")
-    await node_b.connect(node_c, forward_as="data_from_B")
+    await node_a.connect(node_b, forward="data_from_A")
+    with pytest.raises(ForwardingOverrideError):
+        await node_b.connect(node_c, forward="data_from_B")
 
-    # Create executor and run the tree
-    executor = TreeExecutor(uuid="Forwarding Conflict Test", roots=[node_a])
-    result = await executor.run()
-
-    # Assert all nodes were processed
-    expected_nodes = [node_a.uuid, node_b.uuid, node_c.uuid]
-    assert all(node.uuid in expected_nodes for node in result)
-    assert len(result) == 1
-
-    # Verify the forwarding chain worked correctly
-    assert forwarded_values["A"] == "data_from_A"
-    assert forwarded_values["B"] == "processed_data_from_A"
-    assert "C" not in forwarded_values.keys()
-
-    # Verify the final state of node C's kwargs
-    assert node_c.kwargs["data_from_B"] == "will_raise_error"
+    # Connect-time conflict should prevent building the tree; node C should not be run.
 
 
 @pytest.mark.asyncio
@@ -182,13 +234,13 @@ async def test_on_before_forward_filtering():
     # Connect A to B with filtering for first number
     await node_a.connect(
         node_b,
-        forward_as="first_number",
+        forward="first_number",
         on_before_forward=(filter_first_number, None),
     )
 
     # Connect A to C with filtering for second number
     await node_a.connect(
-        node_c, forward_as="second_number", on_before_forward=(filter_second_number, {})
+        node_c, forward="second_number", on_before_forward=(filter_second_number, {})
     )
 
     # Create executor and run the tree
@@ -264,14 +316,14 @@ async def test_on_before_forward_with_kwargs():
     # Connect A to B with filtering for even numbers (max 3)
     await node_a.connect(
         node_b,
-        forward_as="even_numbers",
+        forward="even_numbers",
         on_before_forward=(filter_even_numbers, {"max_count": 3}),
     )
 
     # Connect A to C with filtering for odd numbers (max 2)
     await node_a.connect(
         node_c,
-        forward_as="odd_numbers",
+        forward="odd_numbers",
         on_before_forward=(filter_odd_numbers, {"max_count": 2}),
     )
 

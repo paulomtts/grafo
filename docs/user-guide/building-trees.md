@@ -13,8 +13,8 @@ node_1 → node_2 → node_3
 ```
 
 ```python
-await node_1.connect(node_2, forward_as="data")
-await node_2.connect(node_3, forward_as="data")
+await node_1.connect(node_2, forward="data")
+await node_2.connect(node_3, forward="data")
 ```
 
 ### Fan-out (Parallel Branches)
@@ -28,9 +28,9 @@ One parent, multiple parallel children:
 ```
 
 ```python
-await root.connect(child_a, forward_as="data")
-await root.connect(child_b, forward_as="data")
-await root.connect(child_c, forward_as="data")
+await root.connect(child_a, forward="data")
+await root.connect(child_b, forward="data")
+await root.connect(child_c, forward="data")
 ```
 
 ### Fan-in (Merge Results)
@@ -44,9 +44,9 @@ Multiple parents converge to one child:
 ```
 
 ```python
-await node_a.connect(merger, forward_as="result_a")
-await node_b.connect(merger, forward_as="result_b")
-await node_c.connect(merger, forward_as="result_c")
+await node_a.connect(merger, forward="result_a")
+await node_b.connect(merger, forward="result_b")
+await node_c.connect(merger, forward="result_c")
 
 executor = TreeExecutor(roots=[node_a, node_b, node_c])
 ```
@@ -64,10 +64,10 @@ Combine fan-out and fan-in:
 ```
 
 ```python
-await root.connect(node_a, forward_as="data")
-await root.connect(node_b, forward_as="data")
-await node_a.connect(merger, forward_as="result_a")
-await node_b.connect(merger, forward_as="result_b")
+await root.connect(node_a, forward="data")
+await root.connect(node_b, forward="data")
+await node_a.connect(merger, forward="result_a")
+await node_b.connect(merger, forward="result_b")
 ```
 
 ## Multi-Root Trees

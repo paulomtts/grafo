@@ -76,8 +76,8 @@ async def main():
     saver = Node(coroutine=save_result, uuid="saver")
 
     # Build tree with automatic forwarding
-    await fetcher.connect(processor, forward_as="data")
-    await processor.connect(saver, forward_as="result")
+    await fetcher.connect(processor, forward="data")
+    await processor.connect(saver, forward="result")
 
     # Execute
     executor = TreeExecutor(uuid="Pipeline", roots=[fetcher])

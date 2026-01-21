@@ -22,7 +22,7 @@ async def main():
     node_b = Node(coroutine=add_name, uuid="add_name")
 
     # Connect with automatic forwarding
-    await node_a.connect(node_b, forward_as="greeting")
+    await node_a.connect(node_b, forward="greeting")
 
     # Execute tree
     executor = TreeExecutor(uuid="Greeting Tree", roots=[node_a])
@@ -36,7 +36,7 @@ asyncio.run(main())
 **Key concepts:**
 - `Node` wraps an async function with a unique UUID
 - `connect()` creates parent-child relationships
-- `forward_as="greeting"` automatically passes node_a's output to node_b's `greeting` parameter
+- `forward="greeting"` automatically passes node_a's output to node_b's `greeting` parameter
 - `TreeExecutor` orchestrates execution, ensuring parents run before children
 
 ## Parallel Execution
@@ -54,8 +54,8 @@ root = Node(coroutine=root_task, uuid="root")
 branch_a = Node(coroutine=process, uuid="a", kwargs=dict(label="A"))
 branch_b = Node(coroutine=process, uuid="b", kwargs=dict(label="B"))
 
-await root.connect(branch_a, forward_as="data")
-await root.connect(branch_b, forward_as="data")
+await root.connect(branch_a, forward="data")
+await root.connect(branch_b, forward="data")
 
 executor = TreeExecutor(roots=[root])
 await executor.run()
