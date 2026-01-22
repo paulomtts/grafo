@@ -303,4 +303,3 @@ async for item in executor.yielding():
 
 - [Node](node.md) - Node API documentation
 - [Chunk](chunk.md) - Chunk data structure
-- [Exceptions](exceptions.md) - Error types

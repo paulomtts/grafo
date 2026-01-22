@@ -162,5 +162,4 @@ except NotAsyncCallableError:
 
 ## Next Steps
 
-- [API Reference](../api-reference/exceptions.md) - Complete exception documentation
 - [Event Callbacks](event-callbacks.md) - Monitor execution events
