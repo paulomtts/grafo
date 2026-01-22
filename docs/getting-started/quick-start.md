@@ -34,6 +34,7 @@ asyncio.run(main())
 ```
 
 **Key concepts:**
+
 - `Node` wraps an async function with a unique UUID
 - `connect()` creates parent-child relationships
 - `forward="greeting"` automatically passes node_a's output to node_b's `greeting` parameter

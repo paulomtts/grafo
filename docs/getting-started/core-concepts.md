@@ -9,7 +9,6 @@ A **Node** wraps an async coroutine function as a unit of work in your tree. Eac
 - Executes an async function
 - Has a unique identifier (UUID)
 - Connects to parent and child nodes
-- Waits for all parents before executing
 - Stores output and execution metadata
 
 !!! info "Key principle"
@@ -24,6 +23,7 @@ A **tree** is a directed acyclic graph (DAG) of connected nodes where:
 - **Connections** define execution dependencies
 
 Trees are:
+
 - **Directed**: Data flows parent → child
 - **Acyclic**: No circular dependencies allowed
 - **Flexible**: Can have multiple roots, any shape

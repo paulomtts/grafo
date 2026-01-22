@@ -1,10 +1,18 @@
 # Error Handling
 
-Handle errors gracefully in Grafo trees.
+How Grafo handles errors during tree execution.
 
-## Basic Exception Handling
+## Error Handling in Coroutines
 
-Exceptions propagate normally:
+When a node's coroutine raises an exception during execution, the executor:
+
+1. **Catches the exception** in the worker that was executing the node
+2. **Stores the error** in `executor.errors` for later inspection
+3. **Logs the error** with full traceback information
+4. **Stops all workers** immediately by setting the stop event
+5. **Prevents further execution** - no additional nodes are processed
+
+The exception is not re-raised from `executor.run()`, but you can check `executor.errors` after execution completes:
 
 ```python
 async def failing_task():
@@ -13,58 +21,37 @@ async def failing_task():
 node = Node(coroutine=failing_task, uuid="failer")
 executor = TreeExecutor(roots=[node])
 
-try:
-    await executor.run()
-except ValueError as e:
-    print(f"Caught: {e}")
-```
-
-## Timeout Handling
-
-Set node-level timeouts:
-
-```python
-async def slow_task():
-    await asyncio.sleep(100)
-    return "done"
-
-node = Node(
-    coroutine=slow_task,
-    uuid="slow",
-    timeout=5  # 5 seconds (default: 60)
-)
-
-try:
-    await TreeExecutor(roots=[node]).run()
-except asyncio.TimeoutError:
-    print(f"Timed out after 5 seconds")
-```
-
-## Executor Error Tracking
-
-Check accumulated errors:
-
-```python
-executor = TreeExecutor(roots=[root])
-
-try:
-    await executor.run()
-except Exception as e:
-    logger.error(f"Execution failed: {e}")
+await executor.run()
 
 if executor.errors:
     for error in executor.errors:
         print(f"Error: {error}")
 ```
 
-## Safe Execution Guards
+When using `executor.yielding()`, exceptions in coroutines will stop the generator and you can check `executor.errors`:
 
-Grafo prevents modification of running nodes:
+```python
+results = []
+async for item in executor.yielding():
+    results.append(item)
+
+if executor.errors:
+    print(f"Execution stopped with {len(executor.errors)} error(s)")
+```
+
+## Grafo-Specific Exceptions
+
+Grafo defines several custom exceptions for framework-specific error conditions.
+
+### SafeExecutionError
+
+Raised when attempting to modify a node that is currently executing. This prevents race conditions and ensures tree structure integrity.
 
 ```python
 from grafo.errors import SafeExecutionError
 
 node = Node(coroutine=my_task, uuid="task")
+executor = TreeExecutor(roots=[node])
 run_task = asyncio.create_task(executor.run())
 
 try:
@@ -75,115 +62,66 @@ except SafeExecutionError as e:
 await run_task
 ```
 
-## Error Recovery Patterns
-
-### Retry Pattern
-
-```python
-async def retry_task(max_retries: int = 3):
-    for attempt in range(max_retries):
-        try:
-            return await unreliable_operation()
-        except Exception as e:
-            if attempt == max_retries - 1:
-                raise
-            await asyncio.sleep(2 ** attempt)  # Exponential backoff
-```
-
-### Fallback Pattern
-
-```python
-async def task_with_fallback():
-    try:
-        return await primary_operation()
-    except PrimaryError:
-        return await fallback_operation()
-```
-
-### Circuit Breaker
-
-```python
-class CircuitBreaker:
-    def __init__(self, threshold: int = 3):
-        self.failures = 0
-        self.threshold = threshold
-        self.is_open = False
-
-    async def call(self, func):
-        if self.is_open:
-            raise Exception("Circuit breaker open")
-        try:
-            result = await func()
-            self.failures = 0
-            return result
-        except Exception:
-            self.failures += 1
-            if self.failures >= self.threshold:
-                self.is_open = True
-            raise
-
-breaker = CircuitBreaker()
-node = Node(
-    coroutine=lambda: breaker.call(unreliable_operation),
-    uuid="protected"
-)
-```
-
-## Handling Forwarding Errors
-
-Validate before forwarding:
-
-```python
-async def validate_forward(value: Any, required_keys: list) -> Any:
-    if not isinstance(value, dict):
-        raise ValueError("Invalid data")
-    if not all(k in value for k in required_keys):
-        raise ValueError(f"Missing required keys: {required_keys}")
-    return value
-
-await parent.connect(
-    child,
-    forward="data",
-    on_before_forward=(validate_forward, {"required_keys": ["id", "name"]})
-)
-```
-
-If you don’t need extra kwargs, you can pass `on_before_forward=validate_forward` directly.
-
-## Error Handling in Yielding
-
-Collect partial results:
-
-```python
-results = []
-try:
-    async for item in executor.yielding():
-        if isinstance(item, Chunk):
-            results.append(item.output)
-except Exception as e:
-    print(f"Error: {e}")
-    print(f"Collected {len(results)} results before error")
-```
-
-## Common Exceptions
-
 ### ForwardingOverrideError
+
+Raised when attempting to forward a node's output to a child that already has a keyword argument with the same name.
 
 ```python
 from grafo.errors import ForwardingOverrideError
 
-node = Node(coroutine=consumer, kwargs=dict(value="preset"))
+child = Node(coroutine=consumer, kwargs=dict(value="preset"))
 try:
-    await parent.connect(node, forward="value")
+    await parent.connect(child, forward="value")
 except ForwardingOverrideError:
     # Can't override existing kwarg
     pass
 ```
 
+### ForwardingParameterError
+
+Raised when attempting to forward output to a parameter that the child coroutine cannot accept (unless the child accepts `**kwargs`).
+
+```python
+from grafo.errors import ForwardingParameterError
+
+async def child_task(x: int):
+    return x + 1
+
+child = Node(coroutine=child_task)
+try:
+    await parent.connect(child, forward="nonexistent_param")
+except ForwardingParameterError:
+    # Child doesn't accept this parameter
+    pass
+```
+
+### AutoForwardError
+
+Raised when `Node.AUTO` forwarding cannot be resolved unambiguously because the child has zero or multiple eligible parameters.
+
+```python
+from grafo.errors import AutoForwardError
+
+async def ambiguous_task(x: int, y: int):
+    return x + y
+
+child = Node(coroutine=ambiguous_task)
+try:
+    await parent.connect(child, forward=Node.AUTO)
+except AutoForwardError:
+    # Multiple eligible parameters, cannot auto-resolve
+    pass
+```
+
 ### MismatchChunkType
+
+Raised when a node's output type doesn't match its declared type parameter during type validation.
 
 ```python
 from grafo.errors import MismatchChunkType
+
+async def returns_int():
+    return 42
 
 node = Node[str](coroutine=returns_int, uuid="wrong")
 try:
@@ -194,26 +132,35 @@ except MismatchChunkType as e:
 
 ### NotAsyncCallableError
 
+Raised when calling a method that expects a specific coroutine type, but the node's coroutine doesn't match.
+
 ```python
 from grafo.errors import NotAsyncCallableError
 
+async def regular_coroutine():
+    return "result"
+
 node = Node(coroutine=regular_coroutine, uuid="regular")
 try:
-    await node.run_yielding()  # Wrong method
+    output = node.output  # OK
+    aggregated = node.aggregated_output  # Wrong - not a yielding coroutine
 except NotAsyncCallableError:
-    # Use run() instead
-    await node.run()
+    # Use output instead of aggregated_output
+    pass
 ```
 
-## Best Practices
+Also raised when calling `run_yielding()` on a non-yielding coroutine or `run()` on a yielding coroutine:
 
-1. **Fail fast for logic errors**: Don't catch programming mistakes
-2. **Log with context**: Include node UUIDs and details
-3. **Handle expected errors**: Retry transient failures
-4. **Clean up resources**: Use try/finally for cleanup
-5. **Document exceptions**: Note what can be raised
+```python
+node = Node(coroutine=regular_coroutine)
+try:
+    async for chunk in node.run_yielding():
+        pass
+except NotAsyncCallableError:
+    await node.run()  # Use run() for non-yielding coroutines
+```
 
 ## Next Steps
 
-- [API Reference](../api-reference/exceptions.md) - All exception types
-- [Event Callbacks](event-callbacks.md) - Monitor errors
+- [API Reference](../api-reference/exceptions.md) - Complete exception documentation
+- [Event Callbacks](event-callbacks.md) - Monitor execution events

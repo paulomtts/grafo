@@ -188,7 +188,7 @@ wheels = [
 
 [[package]]
 name = "grafo"
-version = "0.3.1"
+version = "0.3.2"
 source = { editable = "." }
 dependencies = [
     { name = "bump2version" },

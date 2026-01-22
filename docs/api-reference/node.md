@@ -54,7 +54,6 @@ node = Node(
     uuid="doubler",
     kwargs=dict(value=5),
     timeout=30,
-    on_before_run=lambda n: print(f"Starting {n.uuid}")
 )
 ```
 
@@ -81,22 +80,22 @@ result = node.output  # Access the result
 ```python
 @property
 def aggregated_output(self) -> list:
-    """List of outputs from all child nodes."""
+    """List of all outputs yielded by a yielding coroutine."""
 ```
 
 **Example:**
 ```python
-parent = Node(coroutine=producer, uuid="parent")
-child_a = Node(coroutine=task_a, uuid="a")
-child_b = Node(coroutine=task_b, uuid="b")
+async def counting_task():
+    for i in range(5):
+        yield f"Step {i}"
 
-await parent.connect(child_a)
-await parent.connect(child_b)
+node = Node(coroutine=counting_task, uuid="counter")
+executor = TreeExecutor(roots=[node])
 
 await executor.run()
 
-# Get all child outputs
-children_outputs = parent.aggregated_output  # [output_a, output_b]
+# Get all yielded outputs
+all_outputs = node.aggregated_output  # ["Step 0", "Step 1", "Step 2", "Step 3", "Step 4"]
 ```
 
 ### metadata
@@ -181,7 +180,7 @@ await parent.connect(child, forward="data")  # With forwarding
 
 await parent.connect(child, forward=Node.AUTO)  # AUTO (single-input children)
 
-async def transform(value):
+async def transform(data: str):
     return value.upper()
 
 await parent.connect(
@@ -351,75 +350,6 @@ async def on_before_forward_callback(
     Receives the forwarded value (positional) plus any `fixed_kwargs` if provided.
     Alternatively, you can declare the parameter as keyword-only `forward_data`.
     """
-```
-
-## Complete Example
-
-```python
-import asyncio
-from grafo import Node, TreeExecutor
-
-async def extract_data(source: str):
-    """Extract data from source."""
-    await asyncio.sleep(1)
-    return f"data_from_{source}"
-
-async def transform_data(data: str):
-    """Transform extracted data."""
-    await asyncio.sleep(0.5)
-    return data.upper()
-
-async def load_data(data: str):
-    """Load transformed data."""
-    await asyncio.sleep(0.5)
-    print(f"Loaded: {data}")
-    return "success"
-
-async def log_before(node: Node):
-    print(f"Starting {node.uuid}")
-
-async def log_after(node: Node):
-    print(f"Completed {node.uuid} in {node.metadata.runtime}s")
-
-async def main():
-    # Create nodes
-    extractor = Node[str](
-        coroutine=extract_data,
-        uuid="extractor",
-        kwargs=dict(source="database"),
-        timeout=30,
-        on_before_run=log_before,
-        on_after_run=log_after
-    )
-
-    transformer = Node[str](
-        coroutine=transform_data,
-        uuid="transformer",
-        on_before_run=log_before,
-        on_after_run=log_after
-    )
-
-    loader = Node[str](
-        coroutine=load_data,
-        uuid="loader",
-        on_before_run=log_before,
-        on_after_run=log_after
-    )
-
-    # Build pipeline
-    await extractor.connect(transformer, forward="data")
-    await transformer.connect(loader, forward="data")
-
-    # Execute
-    executor = TreeExecutor(uuid="ETL Pipeline", roots=[extractor])
-    await executor.run()
-
-    # Access results
-    print(f"Extractor output: {extractor.output}")
-    print(f"Transformer output: {transformer.output}")
-    print(f"Loader output: {loader.output}")
-
-asyncio.run(main())
 ```
 
 ## See Also

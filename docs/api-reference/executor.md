@@ -249,8 +249,8 @@ Nodes execute according to these rules:
 
 1. Root nodes start immediately
 2. A node waits for ALL parent nodes to complete
-3. Independent branches execute in parallel
-4. Execution continues until all nodes complete
+3. Independent branches execute in concurrently
+4. Execution continues until all there are no children left to enqueued
 
 ### Example Execution Flow
 
@@ -265,7 +265,7 @@ Nodes execute according to these rules:
 # Execution order:
 # 1. A starts (root)
 # 2. A completes
-# 3. B and C start in parallel
+# 3. B and C start in concurrently
 # 4. B and C complete
 # 5. D starts (waits for both B and C)
 # 6. D completes
@@ -276,16 +276,12 @@ Nodes execute according to these rules:
 ### run() Return Value
 
 ```python
-nodes, chunks = await executor.run()
+results = await executor.run()
 
-# nodes: List[Node]
+# results: List[Node]
 # - All executed nodes from the tree
 # - Access node.output for results
 # - Access node.metadata for execution info
-
-# chunks: List[Chunk]
-# - All chunks from yielding nodes
-# - Empty list if no nodes use yielding
 ```
 
 ### yielding() Yield Values
@@ -302,167 +298,6 @@ async for item in executor.yielding():
         result = item.output
         runtime = item.metadata.runtime
 ```
-
-## Error Handling
-
-### Exceptions
-
-Exceptions from node execution propagate to the executor:
-
-```python
-try:
-    await executor.run()
-except ValueError as e:
-    print(f"Node raised ValueError: {e}")
-except asyncio.TimeoutError:
-    print("A node timed out")
-```
-
-### Error Tracking
-
-The executor collects errors:
-
-```python
-await executor.run()
-
-if executor.errors:
-    print(f"Encountered {len(executor.errors)} errors")
-    for i, error in enumerate(executor.errors, 1):
-        print(f"{i}. {type(error).__name__}: {error}")
-```
-
-## Complete Example
-
-```python
-import asyncio
-from grafo import Node, TreeExecutor, Chunk
-
-# Define tasks
-async def fetch_users():
-    await asyncio.sleep(1)
-    return ["alice", "bob", "charlie"]
-
-async def process_user(username: str):
-    for step in ["validate", "enrich", "format"]:
-        await asyncio.sleep(0.5)
-        yield f"{username}:{step}"
-    yield f"DONE:{username}"
-
-async def aggregate_users(users: list):
-    return {"total": len(users), "users": users}
-
-async def main():
-    # Create nodes
-    fetcher = Node[list](
-        coroutine=fetch_users,
-        uuid="fetcher"
-    )
-
-    processors = [
-        Node[str](
-            coroutine=process_user,
-            uuid=f"processor_{i}",
-            kwargs=dict(username=lambda idx=i: fetcher.output[idx])
-        )
-        for i in range(3)
-    ]
-
-    aggregator = Node[dict](
-        coroutine=aggregate_users,
-        uuid="aggregator",
-        kwargs=dict(users=lambda: [p.output for p in processors])
-    )
-
-    # Build tree
-    for processor in processors:
-        await fetcher.connect(processor)
-        await processor.connect(aggregator)
-
-    # Create executor
-    executor = TreeExecutor(
-        uuid="User Processing Pipeline",
-        description="Fetch, process, and aggregate user data",
-        roots=[fetcher]
-    )
-
-    print(f"Executing: {executor.name}")
-    if executor.description:
-        print(f"Description: {executor.description}")
-
-    # Stream results
-    async for item in executor.yielding(latency=0.1):
-        if isinstance(item, Chunk):
-            print(f"  Progress: {item.output}")
-        elif isinstance(item, Node):
-            print(f"  ✓ {item.uuid} completed")
-
-    # Show final results
-    print(f"\nFinal aggregation: {aggregator.output}")
-
-    # Show leaf nodes
-    leaves = executor.get_leaves()
-    print(f"\nLeaf nodes: {[leaf.uuid for leaf in leaves]}")
-
-    # Check for errors
-    if executor.errors:
-        print(f"\nErrors: {executor.errors}")
-
-asyncio.run(main())
-```
-
-Output:
-```
-Executing: User Processing Pipeline
-Description: Fetch, process, and aggregate user data
-  ✓ fetcher completed
-  Progress: alice:validate
-  Progress: bob:validate
-  Progress: charlie:validate
-  Progress: alice:enrich
-  Progress: bob:enrich
-  Progress: charlie:enrich
-  Progress: alice:format
-  Progress: bob:format
-  Progress: charlie:format
-  Progress: DONE:alice
-  Progress: DONE:bob
-  Progress: DONE:charlie
-  ✓ processor_0 completed
-  ✓ processor_1 completed
-  ✓ processor_2 completed
-  ✓ aggregator completed
-
-Final aggregation: {'total': 3, 'users': ['DONE:alice', 'DONE:bob', 'DONE:charlie']}
-
-Leaf nodes: ['aggregator']
-```
-
-## Performance Considerations
-
-### Latency Tuning
-
-!!! tip "Latency tuning"
-    Lower latency is more responsive but uses more CPU. Higher latency reduces CPU usage.
-
-```python
-# High responsiveness (more CPU)
-async for item in executor.yielding(latency=0.05):
-    ...
-
-# Balanced (default)
-async for item in executor.yielding(latency=0.2):
-    ...
-
-# Lower CPU usage
-async for item in executor.yielding(latency=0.5):
-    ...
-```
-
-### Memory Usage
-
-- `run()` collects all results in memory
-- `yielding()` streams results, lower memory footprint
-- For large trees, prefer `yielding()` and process results incrementally
 
 ## See Also
 

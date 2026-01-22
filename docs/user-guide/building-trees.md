@@ -1,8 +1,12 @@
 # Building Trees
 
-Construct tree structures for different execution patterns.
+Grafo allows you to structure your trees however you want.
 
-## Tree Patterns
+!!! info "Cyclic Trees Are Possible"
+    Grafo lets you build cycles—even an infinite loop! This means you can connect nodes in a way that creates a cycle within your tree structure, allowing for ongoing, cyclic executions. However, be aware that running such a tree will cause it to execute forever unless you explicitly break the cycle or add some stopping condition in your node logic.
+
+
+## Common Patterns
 
 ### Linear Chain
 
@@ -80,32 +84,6 @@ root_b = Node(coroutine=task_b, uuid="root_b")
 
 executor = TreeExecutor(roots=[root_a, root_b])
 # Both start simultaneously
-```
-
-## Dynamic Modification
-
-### Adding Connections
-
-```python
-# Add new branch during execution
-new_node = Node(coroutine=new_task, uuid="new")
-await parent.connect(new_node)
-```
-
-### Redirecting
-
-```python
-# Change children
-await parent.redirect([new_child_a, new_child_b])
-# Old children disconnected, new ones connected
-```
-
-## Getting Leaf Nodes
-
-```python
-executor = TreeExecutor(roots=[root])
-leaves = executor.get_leaves()
-# Returns all nodes with no children
 ```
 
 ## Next Steps

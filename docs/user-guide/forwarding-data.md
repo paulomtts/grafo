@@ -20,6 +20,13 @@ node_b = Node(coroutine=consumer, uuid="consumer")
 await node_a.connect(node_b, forward="input_data")
 ```
 
+!!! info "AUTO Forwarding"
+    If the child's coroutine has exactly one eligible parameter, you can omit the name and use automatic forwarding:
+
+    ```python
+    await node_a.connect(node_b, forward=Node.AUTO)
+    ```
+
 ### Multiple Parents
 
 Each parent forwards to different parameters:
@@ -42,14 +49,6 @@ await name_node.connect(profile_node, forward="name")
 await age_node.connect(profile_node, forward="age")
 ```
 
-### AUTO forwarding
-
-If the child has exactly one eligible parameter (not already set in `kwargs`), you can omit the name:
-
-```python
-await node_a.connect(node_b, forward=Node.AUTO)
-```
-
 ## Manual Forwarding
 
 Use lambdas for dynamic evaluation:
@@ -64,36 +63,6 @@ node_b = Node(
 )
 
 await node_a.connect(node_b)
-```
-
-### Transformation
-
-Transform data before passing:
-
-```python
-kwargs=dict(
-    value=lambda: node_a.output.upper()  # Transform to uppercase
-)
-```
-
-### Extraction
-
-Extract part of parent's output:
-
-```python
-kwargs=dict(
-    name=lambda: node_a.output["name"]  # Extract just name field
-)
-```
-
-### Combination
-
-Combine multiple parent outputs:
-
-```python
-kwargs=dict(
-    combined=lambda: f"{node_a.output} + {node_b.output}"
-)
 ```
 
 ## Forwarding with Transformations
@@ -111,35 +80,22 @@ await parent.connect(
 )
 ```
 
-!!! info "Fixed kwargs for callbacks"
-    If you need extra fixed kwargs, pass a tuple `(callback, fixed_kwargs)`.
+!!! info "How on_before_forward arguments work"
+    If you pass only a callback to `on_before_forward`, the callback will receive just the value being forwarded—nothing else.  
+    If you need to provide additional arguments, pass a tuple `(callback, fixed_kwargs)`. In this case, `fixed_kwargs` will be merged in when calling your callback.
 
-```python
-async def scale_value(value: Any, multiplier: int) -> Any:
-    return value * multiplier
-
-await parent.connect(
-    child,
-    forward="data",
-    on_before_forward=(scale_value, {"multiplier": lambda: some_node.output})
-)
-```
 
 ## Constraints
 
-!!! warning "No override conflicts"
-    You can’t forward into a parameter that’s already present in the child’s `kwargs`.
-
 ```python
-# This raises ForwardingOverrideError
 child = Node(coroutine=task, kwargs=dict(value="preset"))
-await parent.connect(child, forward="value")  # Error!
+await parent.connect(child, forward="preset")  # Error!
 
 # Solution: use different parameter or remove preset
 ```
 
-!!! warning "Parameter must exist"
-    Forwarding parameter must match the child coroutine signature (unless the child accepts `**kwargs`).
+!!! warning "No override conflicts"
+    You can’t forward into a parameter that’s already present in the child’s `kwargs`.
 
 ```python
 async def consumer(expected_param: str):
@@ -152,19 +108,8 @@ await parent.connect(child, forward="expected_param")
 await parent.connect(child, forward="wrong_param")
 ```
 
-## Aggregating Child Outputs
-
-Access all child outputs from parent:
-
-```python
-await parent.connect(child_a, forward="data")
-await parent.connect(child_b, forward="data")
-await parent.connect(child_c, forward="data")
-
-await executor.run()
-
-outputs = parent.aggregated_output  # List of all child outputs
-```
+!!! warning "Parameter must exist"
+    Forwarding parameter must match the child coroutine signature (unless the child accepts `**kwargs`).
 
 ## Next Steps
 

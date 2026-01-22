@@ -8,13 +8,6 @@ Grafo allows you to organize asynchronous tasks (coroutines) into tree structure
 
 **A node can only start executing once all its parents have finished running.**
 
-This constraint enables powerful patterns like:
-
-- Pipeline processing with dependencies
-- Parallel execution of independent branches
-- Hierarchical task decomposition
-- Dynamic workflow modification during runtime
-
 ## Key Features
 
 ### Automatic Worker Management
@@ -42,14 +35,6 @@ Use Python generics to validate node outputs at runtime.
 ### Event Callbacks
 Hook into node lifecycle events for monitoring, logging, or custom behaviors.
 
-## Design Philosophy
-
-Grafo follows three core principles:
-
-1. **Follow established nomenclature**: a Node is a Node - precise terminology
-2. **Syntax sugar is sweet in moderation**: minimal magic, explicit API
-3. **Give the programmer granular control**: fine-grained customization options
-
 ## Quick Example
 
 ```python
@@ -76,8 +61,8 @@ async def main():
     saver = Node(coroutine=save_result, uuid="saver")
 
     # Build tree with automatic forwarding
-    await fetcher.connect(processor, forward="data")
-    await processor.connect(saver, forward="result")
+    await fetcher.connect(processor, forward=Node.AUTO)
+    await processor.connect(saver, forward="Node.AUTO)
 
     # Execute
     executor = TreeExecutor(uuid="Pipeline", roots=[fetcher])
@@ -85,6 +70,10 @@ async def main():
 
 asyncio.run(main())
 ```
+
+!!! info "Info"
+    Using `Node.AUTO` as the `forward` argument means the parent node's output will be passed as the **first positional argument** to the child node's coroutine. This enables simple and automatic data transfer between connected nodes.
+
 
 ## Next Steps
 

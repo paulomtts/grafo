@@ -292,10 +292,6 @@ class Node(Generic[N]):
         ] = None
         if on_before_forward is not None:
             if isinstance(on_before_forward, tuple):
-                if len(on_before_forward) != 2:
-                    raise TypeError(
-                        "on_before_forward must be a callback or a tuple (callback, fixed_kwargs)."
-                    )
                 normalized_on_before_forward = on_before_forward
             else:
                 normalized_on_before_forward = (on_before_forward, None)

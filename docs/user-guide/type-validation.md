@@ -20,35 +20,6 @@ string_node = Node[str](coroutine=return_string, uuid="string")
 number_node = Node[int](coroutine=return_number, uuid="number")
 ```
 
-## Type Checking
-
-Raises `MismatchChunkType` on type mismatch:
-
-```python
-async def wrong_type():
-    return 42  # Returns int
-
-node = Node[str](coroutine=wrong_type, uuid="wrong")  # Expects str
-
-try:
-    await TreeExecutor(roots=[node]).run()
-except MismatchChunkType as e:
-    print(f"Type error: {e}")
-```
-
-## Validation for Yielded Values
-
-All yields must match the type:
-
-```python
-async def yield_strings():
-    yield "first"
-    yield "second"
-    yield "third"
-
-node = Node[str](coroutine=yield_strings, uuid="yielder")
-# All yields validated
-```
 
 ## Complex Types
 
@@ -110,32 +81,6 @@ Omit type parameter for no validation:
 node = Node(coroutine=any_return_type, uuid="untyped")
 # No runtime validation
 ```
-
-## Type Hints vs Grafo Generics
-
-```python
-# Type hint (static checking with mypy)
-async def typed_function() -> str:
-    return "result"
-
-# Grafo generic (runtime validation)
-node = Node[str](coroutine=typed_function, uuid="node")
-
-# Use both for maximum safety
-```
-
-## When to Use
-
-Use type validation for:
-- Critical data flows
-- API contracts
-- Complex pipelines
-- Integration points
-
-Skip for:
-- Prototyping
-- Dynamic types
-- Performance-critical paths
 
 ## Next Steps
 

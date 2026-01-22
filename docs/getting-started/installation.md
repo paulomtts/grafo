@@ -14,15 +14,6 @@ pip install grafo
 
 ## Verify Installation
 
-Verify that Grafo is installed correctly:
-
-```python
-import grafo
-print(grafo.__version__)  # Should print the version number
-```
-
-Or run a quick test:
-
 ```python
 import asyncio
 from grafo import Node, TreeExecutor

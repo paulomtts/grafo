@@ -79,4 +79,3 @@ nav:
     - Node: api-reference/node.md
     - TreeExecutor: api-reference/executor.md
     - Chunk: api-reference/chunk.md
-    - Exceptions: api-reference/exceptions.md

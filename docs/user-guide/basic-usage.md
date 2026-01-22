@@ -37,12 +37,6 @@ node = Node(
 await parent.connect(child)
 ```
 
-### With Forwarding
-
-```python
-await parent.connect(child, forward="input_param")
-```
-
 ### Multiple Children (Parallel)
 
 ```python
@@ -95,21 +89,14 @@ runtime = node.metadata.runtime  # Execution time in seconds
 level = node.metadata.level  # Tree depth (0 for roots)
 ```
 
-## Error Handling
+!!! info "TreeExecutor Return Value"
+    The `TreeExecutor.run()` method returns a list of `Node` objects in the order they executed. This allows you to inspect all nodes after execution, including their outputs and metadata. For example:
 
-```python
-try:
-    await executor.run()
-except asyncio.TimeoutError:
-    print(f"Node timed out")
-except ValueError as e:
-    print(f"Task failed: {e}")
-
-# Check executor errors
-if executor.errors:
-    for error in executor.errors:
-        print(f"Error: {error}")
-```
+    ```python
+    results = await executor.run()
+    for node in results:
+        print(f"{node.uuid}: {node.output}")
+    ```
 
 ## Disconnecting Nodes
 
