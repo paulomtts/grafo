@@ -248,9 +248,9 @@ The executor automatically manages a pool of async workers:
 Nodes execute according to these rules:
 
 1. Root nodes start immediately
-2. A node waits for ALL parent nodes to complete
-3. Independent branches execute in concurrently
-4. Execution continues until all there are no children left to enqueued
+2. A node is only run once all its parents have completed (the executor enqueues a node only when all its parents have completed)
+3. Independent branches execute concurrently
+4. Execution continues until there are no children left to be enqueued
 
 ### Example Execution Flow
 
@@ -265,9 +265,9 @@ Nodes execute according to these rules:
 # Execution order:
 # 1. A starts (root)
 # 2. A completes
-# 3. B and C start in concurrently
+# 3. B and C start concurrently
 # 4. B and C complete
-# 5. D starts (waits for both B and C)
+# 5. D starts once both B and C have completed
 # 6. D completes
 ```
 

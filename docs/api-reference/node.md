@@ -22,7 +22,7 @@ Node(
     *,
     uuid: str,
     kwargs: Optional[dict] = None,
-    timeout: int = 60,
+    timeout: Optional[float] = 60.0,
     on_connect: Optional[Callable] = None,
     on_disconnect: Optional[Callable] = None,
     on_before_run: Optional[Callable] = None,
@@ -37,7 +37,7 @@ Node(
 | `coroutine` | `AwaitableCallback` | Required | The async function to execute |
 | `uuid` | `str` | Required | Unique identifier for the node |
 | `kwargs` | `Optional[dict]` | `None` | Arguments to pass to the coroutine. Values can be static or lambda functions for dynamic evaluation |
-| `timeout` | `int` | `60` | Maximum execution time in seconds |
+| `timeout` | `Optional[float]` | `60.0` | Maximum execution time in seconds for the node's own run |
 | `on_connect` | `Optional[Callable]` | `None` | Async callback when connecting to a child |
 | `on_disconnect` | `Optional[Callable]` | `None` | Async callback when disconnecting from a child |
 | `on_before_run` | `Optional[Callable]` | `None` | Async callback before execution |

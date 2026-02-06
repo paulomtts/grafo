@@ -1,4 +1,4 @@
-A simple library for building runnable async trees. Trees are a web of interconnected Nodes, which contain code to be run. **A node can only start executing once all it's parents have finished running.**
+A simple library for building runnable async trees. Trees are a web of interconnected Nodes, which contain code to be run. **A node can only start executing once all its parents have finished running.**
 
 ## Features
 - The number of workers is automatically managed - although you can parametrize this
@@ -76,7 +76,7 @@ node = Node[str](coroutine=my_string_coroutine)
 
 ## Documentation
 
-Full documentation is available at [https://paulomtts.github.io/grafo/](httppaulomttsUSERNAME.github.io/grafo/)
+Full documentation is available at [https://paulomtts.github.io/grafo/](https://paulomtts.github.io/grafo/)
 
 To build the documentation locally:
 
