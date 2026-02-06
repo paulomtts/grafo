@@ -138,9 +138,11 @@ class TreeExecutor(Generic[N]):
                     await node.run()
                     self._output.append(node)
 
-                # Enqueue children
+                # Enqueue children only when all of each child's parents have completed
                 for child in node.children:
-                    if child not in self._enqueued_nodes:
+                    if child not in self._enqueued_nodes and all(
+                        e.is_set() for e in child._parent_events
+                    ):
                         self._enqueued_nodes.add(child)
                         self._queue.put_nowait(child)
                 logger.info(

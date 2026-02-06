@@ -1,3 +1,4 @@
+import asyncio
 import random
 import pytest
 
@@ -119,6 +120,32 @@ async def test_error():
     assert all(node.uuid in nodes_uuids for node in result)
     assert child_node2.uuid not in nodes_uuids
     assert grandchild_node2.uuid not in nodes_uuids
+    assert len(executor.errors) == 1
+
+
+@pytest.mark.asyncio
+async def test_run_timeout():
+    """
+    Test that a node with a short timeout that runs longer raises TimeoutError
+    and is recorded in executor.errors; the node does not complete.
+    """
+
+    async def slow_coroutine(node):
+        await asyncio.sleep(2)
+        return f"{node.uuid} result"
+
+    root_node = create_node("root", mockup_coroutine)
+    slow_node = create_node("slow", slow_coroutine, timeout=0.5)
+    await root_node.connect(slow_node)
+
+    executor = TreeExecutor(uuid="Timeout Tree", roots=[root_node])
+    result = await executor.run()
+
+    assert len(executor.errors) == 1
+    assert isinstance(executor.errors[0], asyncio.TimeoutError)
+    node_uuids = [n.uuid for n in result]
+    assert root_node.uuid in node_uuids
+    assert slow_node.uuid not in node_uuids
 
 
 @pytest.mark.asyncio

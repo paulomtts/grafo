@@ -368,6 +368,13 @@ class Node(Generic[N]):
                 f"Node {self} yielded an output of type {type(value)} but expected {expected_type}"
             )
 
+    def _run_coroutine_with_timeout(self, runtime_kwargs: dict[str, Any]):
+        if self._timeout is not None:
+            return asyncio.wait_for(
+                self.coroutine(**runtime_kwargs), timeout=self._timeout
+            )
+        return self.coroutine(**runtime_kwargs)
+
     @safe_execution
     async def _run(self) -> Any:
         """
@@ -377,7 +384,7 @@ class Node(Generic[N]):
             start_time = time.time()
             self._is_running = True
             runtime_kwargs = self._eval_kwargs(self.kwargs)
-            result = await self.coroutine(**runtime_kwargs)
+            result = await self._run_coroutine_with_timeout(runtime_kwargs)
             self._validate_type(result)
             self._output = result
             self._event.set()
@@ -397,15 +404,51 @@ class Node(Generic[N]):
             start_time = time.time()
             self._is_running = True
             runtime_kwargs = self._eval_kwargs(self.kwargs)
-            async for result in self.coroutine(**runtime_kwargs):
-                self._aggregated_output.append(result)
-                self._output = result
-                if not isinstance(result, Chunk):
-                    yield Chunk[N](self.uuid, result)
-                else:
-                    self._validate_type(result.output)
-                    yield result
+            deadline = (
+                time.monotonic() + self._timeout if self._timeout is not None else None
+            )
+            queue: asyncio.Queue[Any] = asyncio.Queue()
+            sentinel = object()
 
+            async def producer() -> None:
+                try:
+                    async for result in self.coroutine(**runtime_kwargs):
+                        self._aggregated_output.append(result)
+                        await queue.put(result)
+                finally:
+                    await queue.put(sentinel)
+
+            producer_task = asyncio.create_task(producer())
+            try:
+                while True:
+                    if deadline is not None and time.monotonic() > deadline:
+                        producer_task.cancel()
+                        try:
+                            await producer_task
+                        except asyncio.CancelledError:
+                            pass
+                        raise asyncio.TimeoutError()
+                    try:
+                        item = await asyncio.wait_for(queue.get(), timeout=0.05)
+                    except asyncio.TimeoutError:
+                        continue
+                    if item is sentinel:
+                        break
+                    result = item
+                    self._output = result
+                    if not isinstance(result, Chunk):
+                        yield Chunk[N](self.uuid, result)
+                    else:
+                        self._validate_type(result.output)
+                        yield result
+            finally:
+                if not producer_task.done():
+                    producer_task.cancel()
+                    try:
+                        await producer_task
+                    except asyncio.CancelledError:
+                        pass
+            await producer_task
             self._event.set()
         finally:
             self._is_running = False
@@ -484,11 +527,6 @@ class Node(Generic[N]):
         """
         Wraps the run method to run the on_before_run and on_after_run callbacks.
         """
-        logger.debug(f"{'|   ' * self.metadata.level}Awaiting {self} parents...")
-        await asyncio.wait_for(
-            asyncio.gather(*[e.wait() for e in self._parent_events]),
-            timeout=self._timeout,
-        )
         await self._on_before_run()
         await self._run()
         await self._forward_output()
@@ -498,11 +536,6 @@ class Node(Generic[N]):
         """
         Wraps the run method to run the on_before_run and on_after_run callbacks.
         """
-        logger.debug(f"{'|   ' * self.metadata.level}Awaiting {self} parents...")
-        await asyncio.wait_for(
-            asyncio.gather(*[e.wait() for e in self._parent_events]),
-            timeout=self._timeout,
-        )
         await self._on_before_run()
         async for result in self._run_yielding():
             yield result

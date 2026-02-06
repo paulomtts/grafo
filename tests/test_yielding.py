@@ -48,14 +48,13 @@ async def test_yielding_results():
 
 
 @pytest.mark.asyncio
-async def test_yielding_results_with_timeout():
+async def test_yielding_results_with_multiple_parents():
     """
-    Test the TreeExecutor's .yielding() method with a node that times out,
-    ensuring that nodes that exceed the timeout do not yield a result.
+    Test the TreeExecutor's .yielding() method with a node that has multiple parents.
+    The union node is only enqueued when both parents have completed, then runs to completion.
     """
 
     async def long_running_coroutine(node: Node):
-        # Simulate a long-running task
         await asyncio.sleep(3)
         logger.info(f"{node.uuid} executed")
         return f"{node.uuid} result"
@@ -63,18 +62,14 @@ async def test_yielding_results_with_timeout():
     root_node = create_node("root", mockup_coroutine)
     child1_node = create_node("child1", long_running_coroutine)
     child2_node = create_node("child2", mockup_coroutine)
-    union_node = create_node(
-        "union",
-        long_running_coroutine,
-        timeout=1,
-    )
+    union_node = create_node("union", long_running_coroutine)
 
     await root_node.connect(child1_node)
     await root_node.connect(child2_node)
     await child1_node.connect(union_node)
     await child2_node.connect(union_node)
 
-    executor = TreeExecutor(uuid="Yielding Tree with Timeout", roots=[root_node])
+    executor = TreeExecutor(uuid="Yielding Tree with Union", roots=[root_node])
 
     results = []
     async for node in executor.yielding():
@@ -87,14 +82,42 @@ async def test_yielding_results_with_timeout():
         root_node.uuid,
         child1_node.uuid,
         child2_node.uuid,
+        union_node.uuid,
     ]
-
     yielded_ids = [n_uuid for n_uuid, _ in results]
     assert all(node_uuid in yielded_ids for node_uuid in expected_node_ids)
-    assert union_node.uuid not in yielded_ids
     logger.info(
-        "Test yield with timeout: timed out union node did not yield result, others yielded successfully."
+        "Union node was enqueued only after both parents completed, then ran and yielded."
     )
+
+
+@pytest.mark.asyncio
+async def test_yielding_timeout():
+    """
+    Test that a yielding node with a short timeout that runs longer raises TimeoutError;
+    the node does not complete and is not in the yielded results.
+    """
+
+    async def slow_yielding_coroutine(node: Node):
+        await asyncio.sleep(1)
+        yield f"{node.uuid} first"
+        await asyncio.sleep(1)
+        yield f"{node.uuid} second"
+
+    root_node = create_node("root", mockup_coroutine)
+    slow_node = create_node("slow", slow_yielding_coroutine, timeout=0.5)
+    await root_node.connect(slow_node)
+
+    executor = TreeExecutor(uuid="Yielding Timeout Tree", roots=[root_node])
+    completed_node_uuids = []
+    async for item in executor.yielding():
+        if isinstance(item, Node):
+            completed_node_uuids.append(item.uuid)
+
+    assert len(executor.errors) == 1
+    assert isinstance(executor.errors[0], asyncio.TimeoutError)
+    assert root_node.uuid in completed_node_uuids
+    assert slow_node.uuid not in completed_node_uuids
 
 
 @pytest.mark.asyncio
