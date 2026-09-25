@@ -1,4 +1,5 @@
-from typing import Any, Protocol, AsyncGenerator, Union, Awaitable
+from collections.abc import AsyncGenerator, Awaitable
+from typing import Any, Protocol
 
 
 class OnForwardCallable(Protocol):
@@ -8,4 +9,4 @@ class OnForwardCallable(Protocol):
 class AwaitableCallback(Protocol):
     def __call__(
         self, *args: Any, **kwargs: Any
-    ) -> Union[Awaitable[Any], AsyncGenerator[Any, None]]: ...
+    ) -> Awaitable[Any] | AsyncGenerator[Any, None]: ...

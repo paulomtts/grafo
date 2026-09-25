@@ -188,27 +188,35 @@ wheels = [
 
 [[package]]
 name = "grafo"
-version = "0.3.3"
+version = "0.3.5"
 source = { editable = "." }
-dependencies = [
+
+[package.dev-dependencies]
+dev = [
     { name = "bump2version" },
-    { name = "mkdocs" },
-    { name = "mkdocs-material" },
-    { name = "mkdocstrings", extra = ["python"] },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
 ]
+docs = [
+    { name = "mkdocs" },
+    { name = "mkdocs-material" },
+    { name = "mkdocstrings", extra = ["python"] },
+]
 
 [package.metadata]
-requires-dist = [
+
+[package.metadata.requires-dev]
+dev = [
     { name = "bump2version", specifier = ">=1.0.1" },
-    { name = "mkdocs", specifier = ">=1.0.1" },
-    { name = "mkdocs-material", specifier = ">=9.0.0" },
-    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.24.0" },
     { name = "pytest", specifier = ">=7.0.1" },
     { name = "pytest-asyncio", specifier = ">=0.16.0" },
     { name = "ruff", specifier = ">=0.0.17" },
+]
+docs = [
+    { name = "mkdocs", specifier = ">=1.0.1" },
+    { name = "mkdocs-material", specifier = ">=9.0.0" },
+    { name = "mkdocstrings", extras = ["python"], specifier = ">=0.24.0" },
 ]
 
 [[package]]

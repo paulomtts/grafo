@@ -49,6 +49,7 @@ Node(
 async def my_task(value: int):
     return value * 2
 
+
 node = Node(
     coroutine=my_task,
     uuid="doubler",
@@ -89,13 +90,16 @@ async def counting_task():
     for i in range(5):
         yield f"Step {i}"
 
+
 node = Node(coroutine=counting_task, uuid="counter")
 executor = TreeExecutor(roots=[node])
 
 await executor.run()
 
 # Get all yielded outputs
-all_outputs = node.aggregated_output  # ["Step 0", "Step 1", "Step 2", "Step 3", "Step 4"]
+all_outputs = (
+    node.aggregated_output
+)  # ["Step 0", "Step 1", "Step 2", "Step 3", "Step 4"]
 ```
 
 ### metadata
@@ -156,7 +160,7 @@ async def connect(
             OnForwardCallable,
             tuple[OnForwardCallable, Optional[dict[str, Any]]],
         ]
-    ] = None
+    ] = None,
 ) -> None:
     """
     Connect this node to a child node.
@@ -180,14 +184,12 @@ await parent.connect(child, forward="data")  # With forwarding
 
 await parent.connect(child, forward=Node.AUTO)  # AUTO (single-input children)
 
+
 async def transform(data: str):
     return value.upper()
 
-await parent.connect(
-    child,
-    forward="data",
-    on_before_forward=transform
-)
+
+await parent.connect(child, forward="data", on_before_forward=transform)
 ```
 
 ### disconnect
@@ -278,6 +280,7 @@ async def yielding_task():
     for i in range(5):
         yield i
 
+
 node = Node(coroutine=yielding_task, uuid="yielder")
 
 async for chunk in node.run_yielding():
@@ -341,10 +344,7 @@ async def on_after_run_callback(node: Node) -> None:
 ### on_before_forward
 
 ```python
-async def on_before_forward_callback(
-    value: Any,
-    **kwargs: Any
-) -> Any:
+async def on_before_forward_callback(value: Any, **kwargs: Any) -> Any:
     """
     Called before forwarding value to child.
     Receives the forwarded value (positional) plus any `fixed_kwargs` if provided.

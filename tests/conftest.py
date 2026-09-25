@@ -1,10 +1,10 @@
 import asyncio
 import logging
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
-
-from grafo._internal import logger
 from grafo import Node
+from grafo._internal import logger
 
 logger.setLevel(logging.DEBUG)
 
@@ -12,10 +12,10 @@ logger.setLevel(logging.DEBUG)
 def create_node(
     name: str,
     coroutine: Any,
-    timeout: Optional[float] = None,
-    on_after_run: Optional[Callable[..., Any]] = None,
-    on_after_run_kwargs: Optional[dict[str, Any]] = None,
-    kwargs: Optional[dict[str, Any]] = None,
+    timeout: float | None = None,
+    on_after_run: Callable[..., Any] | None = None,
+    on_after_run_kwargs: dict[str, Any] | None = None,
+    kwargs: dict[str, Any] | None = None,
 ) -> Node:
     """
     Create a node with the given name, coroutine, and picker function.
@@ -26,7 +26,7 @@ def create_node(
         timeout=timeout,
         on_after_run=(on_after_run, on_after_run_kwargs) if on_after_run else None,
     )
-    node.kwargs = dict(node=node)
+    node.kwargs = {"node": node}
     node.kwargs.update(kwargs or {})
     return node
 
@@ -75,4 +75,3 @@ async def mockup_yielding_coroutine(node: Node):
     # Final result
     await asyncio.sleep(0.5)
     yield f"{node.uuid} completed"
-

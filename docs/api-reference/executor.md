@@ -46,7 +46,7 @@ root_b = Node(coroutine=task_b, uuid="root_b")
 executor = TreeExecutor(
     uuid="My Tree",
     description="Multi-root data processing tree",
-    roots=[root_a, root_b]
+    roots=[root_a, root_b],
 )
 ```
 
@@ -146,8 +146,7 @@ for node in nodes:
 
 ```python
 async def yielding(
-    self,
-    latency: float = 0.2
+    self, latency: float = 0.2
 ) -> AsyncGenerator[Union[Node, Chunk], None]:
     """
     Execute the tree and stream results as they complete.
@@ -221,6 +220,7 @@ async def stop_tree(self) -> None:
 **Example:**
 ```python
 import asyncio
+
 
 async def run_with_timeout():
     executor = TreeExecutor(roots=[root])

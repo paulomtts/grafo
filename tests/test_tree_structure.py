@@ -1,16 +1,17 @@
 import asyncio
 import random
-import pytest
 
-from grafo import TreeExecutor, Node
-from grafo._internal import logger
+import pytest
 from conftest import (
     create_node,
+    cycle_coroutine,
+    mockup_bad_coroutine,
     mockup_coroutine,
     mockup_picker,
-    mockup_bad_coroutine,
-    cycle_coroutine,
 )
+
+from grafo import Node, TreeExecutor
+from grafo._internal import logger
 
 
 @pytest.mark.asyncio
@@ -254,8 +255,8 @@ async def test_dynamic_cycle_connection():
     # Create nodes
     node_a = create_node("nodeA", random_float_coroutine)
     node_b = create_node("nodeB", cycle_creator_coroutine)
-    node_a.kwargs = dict(node=node_a, target_node=node_b)
-    node_b.kwargs = dict(node=node_b, target_node=node_a)
+    node_a.kwargs = {"node": node_a, "target_node": node_b}
+    node_b.kwargs = {"node": node_b, "target_node": node_a}
 
     # Initial connection A -> B
     await node_a.connect(node_b)
@@ -272,4 +273,3 @@ async def test_dynamic_cycle_connection():
     assert node_a_first_output != node_a_second_output
 
     print("Dynamic cycle test completed successfully")
-
