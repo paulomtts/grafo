@@ -18,16 +18,21 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-dependencies = [
+dependencies = []
+requires-python = ">=3.10"
+
+[dependency-groups]
+dev = [
     "bump2version>=1.0.1",
     "pytest-asyncio>=0.16.0",
     "pytest>=7.0.1",
     "ruff>=0.0.17",
+]
+docs = [
     "mkdocs>=1.0.1",
     "mkdocs-material>=9.0.0",
     "mkdocstrings[python]>=0.24.0",
 ]
-requires-python = ">=3.10"
 
 [tool.setuptools]
 
