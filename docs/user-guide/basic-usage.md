@@ -9,8 +9,10 @@ Common operations with nodes and executors.
 ```python
 from grafo import Node
 
+
 async def my_task():
     return "result"
+
 
 node = Node(coroutine=my_task, uuid="task_1")
 ```
@@ -21,11 +23,12 @@ node = Node(coroutine=my_task, uuid="task_1")
 async def add_numbers(a: int, b: int):
     return a + b
 
+
 node = Node(
     coroutine=add_numbers,
     uuid="adder",
     kwargs=dict(a=5, b=3),
-    timeout=30  # Optional timeout in seconds (default: 60)
+    timeout=30,  # Optional timeout in seconds (default: 60)
 )
 ```
 
@@ -71,10 +74,7 @@ print(root_node.output)
 ### Multiple Roots
 
 ```python
-executor = TreeExecutor(
-    uuid="Multi-Root",
-    roots=[root_a, root_b, root_c]
-)
+executor = TreeExecutor(uuid="Multi-Root", roots=[root_a, root_b, root_c])
 await executor.run()
 # All roots start simultaneously
 ```

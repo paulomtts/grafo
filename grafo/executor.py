@@ -2,7 +2,8 @@ import asyncio
 import asyncio.log
 import inspect
 import time
-from typing import AsyncGenerator, Generic, Optional, TypeVar
+from collections.abc import AsyncGenerator
+from typing import Generic, TypeVar
 from uuid import uuid4
 
 from grafo._internal import logger
@@ -28,9 +29,9 @@ class TreeExecutor(Generic[N]):
 
     def __init__(
         self,
-        uuid: Optional[str] = None,
-        description: Optional[str] = "",
-        roots: Optional[list[Node]] = None,
+        uuid: str | None = None,
+        description: str | None = "",
+        roots: list[Node] | None = None,
     ):
         self._uuid = uuid or str(uuid4())
         self._description = description
@@ -148,7 +149,7 @@ class TreeExecutor(Generic[N]):
                 logger.info(
                     f"{'|   ' * (node.metadata.level - 1) + ('|   ' if node.metadata.level > 0 else '')}\033[92m\033[4mCompleted\033[0m {node} in {node.metadata.runtime} seconds"
                 )
-            except Exception as e:
+            except Exception as e:  # noqa: BLE001 - isolate failing node coroutines; errors are recorded in executor.errors
                 self._errors.append(e)
                 logger.error(
                     f"{'|   ' * (node.metadata.level - 1) + ('|---' if node.metadata.level > 0 else '')}\033[4;31mError\033[0m on {node}: {e}",
@@ -199,7 +200,7 @@ class TreeExecutor(Generic[N]):
             raise ValueError("No workers were created.")
 
         logger.info(
-            f"{'|   ' * (base_level - 1) + ('|---' if base_level > 0 else '')}\033[4m\033[90mRunning {'{}'.format(self._uuid) if self._uuid else ''} with {len(self._roots)} root node(s)...\033[0m"
+            f"{'|   ' * (base_level - 1) + ('|---' if base_level > 0 else '')}\033[4m\033[90mRunning {f'{self._uuid}' if self._uuid else ''} with {len(self._roots)} root node(s)...\033[0m"
         )
         start_time = time.time()
 
@@ -233,7 +234,7 @@ class TreeExecutor(Generic[N]):
             raise ValueError("No workers were created.")
 
         logger.info(
-            f"{'|   ' * (base_level - 1) + ('|---' if base_level > 0 else '')}\033[4m\033[90mRunning {'{}'.format(self._uuid) if self._uuid else ''} with {len(self._roots)} root node(s)...\033[0m"
+            f"{'|   ' * (base_level - 1) + ('|---' if base_level > 0 else '')}\033[4m\033[90mRunning {f'{self._uuid}' if self._uuid else ''} with {len(self._roots)} root node(s)...\033[0m"
         )
         start_time = time.time()
 

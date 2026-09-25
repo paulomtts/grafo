@@ -1,9 +1,9 @@
 import pytest
 
-from grafo import TreeExecutor, Node
+from grafo import Node, TreeExecutor
+from grafo._internal import logger
 from grafo.components import Chunk
 from grafo.errors import MismatchChunkType
-from grafo._internal import logger
 
 
 @pytest.mark.asyncio
@@ -74,4 +74,3 @@ async def test_type_validation_mismatch_yielding():
     assert "type_mismatch_yielding_node" in error_message
 
     logger.info("Type validation mismatch yielding test completed successfully!")
-

@@ -14,9 +14,11 @@ Async generators yield intermediate values wrapped in `Chunk` objects containing
 ```python
 from grafo import Node, TreeExecutor, Chunk
 
+
 async def counting_task():
     for i in range(5):
         yield f"Step {i}"
+
 
 node = Node(coroutine=counting_task, uuid="counter")
 executor = TreeExecutor(roots=[node])

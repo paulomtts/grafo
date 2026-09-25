@@ -1,8 +1,12 @@
 import pytest
 
-from grafo import TreeExecutor, Node
+from grafo import Node, TreeExecutor
 from grafo._internal import logger
-from grafo.errors import AutoForwardError, ForwardingOverrideError, ForwardingParameterError
+from grafo.errors import (
+    AutoForwardError,
+    ForwardingOverrideError,
+    ForwardingParameterError,
+)
 
 
 @pytest.mark.asyncio
@@ -131,7 +135,6 @@ async def test_forwarding_auto_ambiguous_raises():
 
     with pytest.raises(AutoForwardError):
         await parent.connect(child, forward=Node.AUTO)
-
 
 
 @pytest.mark.asyncio
@@ -346,4 +349,3 @@ async def test_on_before_forward_with_kwargs():
     assert node_c.kwargs["odd_numbers"] == [1, 3]
 
     logger.info("On before forward with kwargs test completed successfully!")
-

@@ -1,15 +1,12 @@
 import asyncio
 import inspect
 import time
+from collections.abc import AsyncGenerator, Callable
 from typing import (
-    Type,
-    get_args,
     Any,
-    AsyncGenerator,
-    Callable,
     Generic,
-    Optional,
     TypeVar,
+    get_args,
 )
 from uuid import uuid4
 
@@ -22,8 +19,8 @@ from grafo._internal import (
 )
 from grafo.errors import (
     AutoForwardError,
-    ForwardingParameterError,
     ForwardingOverrideError,
+    ForwardingParameterError,
     MismatchChunkType,
     NotAsyncCallableError,
     SafeExecutionError,
@@ -77,28 +74,22 @@ class Node(Generic[N]):
     def __init__(
         self,
         coroutine: AwaitableCallback,
-        kwargs: Optional[dict[str, Any]] = None,
-        uuid: Optional[str] = None,
-        timeout: Optional[float] = 60.0,
-        on_connect: Optional[tuple[AwaitableCallback, Optional[dict[str, Any]]]] = None,
-        on_disconnect: Optional[
-            tuple[AwaitableCallback, Optional[dict[str, Any]]]
-        ] = None,
-        on_before_run: Optional[
-            tuple[AwaitableCallback, Optional[dict[str, Any]]]
-        ] = None,
-        on_after_run: Optional[
-            tuple[AwaitableCallback, Optional[dict[str, Any]]]
-        ] = None,
+        kwargs: dict[str, Any] | None = None,
+        uuid: str | None = None,
+        timeout: float | None = 60.0,
+        on_connect: tuple[AwaitableCallback, dict[str, Any] | None] | None = None,
+        on_disconnect: tuple[AwaitableCallback, dict[str, Any] | None] | None = None,
+        on_before_run: tuple[AwaitableCallback, dict[str, Any] | None] | None = None,
+        on_after_run: tuple[AwaitableCallback, dict[str, Any] | None] | None = None,
     ):
         self.uuid: str = uuid or str(uuid4())
         self.coroutine: Callable = coroutine
         self.kwargs: dict[str, Any] = kwargs or {}
         self.metadata: Metadata = Metadata(runtime=0, level=0)
-        self.children: list["Node"] = []
+        self.children: list[Node] = []
 
         # * Output
-        self._output: Optional[N] = None
+        self._output: N | None = None
         self._aggregated_output: list[N] = []
 
         # * Events
@@ -111,12 +102,12 @@ class Node(Generic[N]):
         self._event: asyncio.Event = asyncio.Event()
         self._is_running: bool = False
         self._parent_events: list[asyncio.Event] = []
-        self._timeout: Optional[float] = timeout
+        self._timeout: float | None = timeout
         self._forward_map: dict[
             str,
             tuple[
                 str,
-                Optional[tuple[OnForwardCallable, Optional[dict[str, Any]]]],
+                tuple[OnForwardCallable, dict[str, Any] | None] | None,
             ],
         ] = {}
         if not timeout:
@@ -221,7 +212,7 @@ class Node(Generic[N]):
 
     async def _run_callback(
         self,
-        prop: tuple[AwaitableCallback, Optional[dict[str, Any]]],
+        prop: tuple[AwaitableCallback, dict[str, Any] | None],
         **kwargs,
     ):
         """
@@ -241,9 +232,7 @@ class Node(Generic[N]):
         *,
         forward: str | object | None = None,
         on_before_forward: (
-            OnForwardCallable
-            | tuple[OnForwardCallable, Optional[dict[str, Any]]]
-            | None
+            OnForwardCallable | tuple[OnForwardCallable, dict[str, Any] | None] | None
         ) = None,
     ):
         """
@@ -278,18 +267,16 @@ class Node(Generic[N]):
         elif isinstance(forward, str):
             forward_param_name = forward
         else:
-            raise TypeError(
-                "forward must be a str, Node.AUTO, or None."
-            )
+            raise TypeError("forward must be a str, Node.AUTO, or None.")
 
         if forward_param_name in child.kwargs:
             raise ForwardingOverrideError(
                 f"{self} is trying to forward its output as `{forward_param_name}` to {child} but it already has an argument with that name."
             )
         child._validate_forward_param_name(forward_param_name)
-        normalized_on_before_forward: Optional[
-            tuple[OnForwardCallable, Optional[dict[str, Any]]]
-        ] = None
+        normalized_on_before_forward: (
+            tuple[OnForwardCallable, dict[str, Any] | None] | None
+        ) = None
         if on_before_forward is not None:
             if isinstance(on_before_forward, tuple):
                 normalized_on_before_forward = on_before_forward
@@ -341,7 +328,7 @@ class Node(Generic[N]):
         if self.on_after_run:
             await self._run_callback(self.on_after_run)
 
-    def _get_expected_type(self) -> Optional[Type[N]]:
+    def _get_expected_type(self) -> type[N] | None:
         """Extract the expected type from the node's generic parameters."""
         if hasattr(self, "__orig_class__"):
             args = get_args(self.__orig_class__)
@@ -480,7 +467,7 @@ class Node(Generic[N]):
 
     async def _run_on_before_forward_callback(
         self,
-        prop: tuple[OnForwardCallable, Optional[dict[str, Any]]],
+        prop: tuple[OnForwardCallable, dict[str, Any] | None],
         forward_data: Any,
     ) -> Any:
         callback, fixed_kwargs = prop
@@ -492,8 +479,7 @@ class Node(Generic[N]):
         parameters = signature.parameters
 
         has_var_keyword = any(
-            param.kind == inspect.Parameter.VAR_KEYWORD
-            for param in parameters.values()
+            param.kind == inspect.Parameter.VAR_KEYWORD for param in parameters.values()
         )
         has_var_positional = any(
             param.kind == inspect.Parameter.VAR_POSITIONAL

@@ -1,8 +1,8 @@
 import pytest
+from conftest import create_node, mockup_coroutine
 
 from grafo import TreeExecutor
 from grafo._internal import logger
-from conftest import create_node, mockup_coroutine
 
 
 @pytest.mark.asyncio

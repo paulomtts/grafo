@@ -65,6 +65,7 @@ async def yielding_task():
     for i in range(5):
         yield f"item_{i}"  # Automatically wrapped in Chunk
 
+
 node = Node(coroutine=yielding_task, uuid="producer")
 ```
 
@@ -91,7 +92,7 @@ async for item in executor.yielding():
 async for item in executor.yielding():
     if isinstance(item, Chunk):
         try:
-            item.output = "new value" # This will raise an error!
+            item.output = "new value"  # This will raise an error!
         except AttributeError:
             print("Chunks are immutable")
 ```

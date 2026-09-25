@@ -17,6 +17,7 @@ A simple library for building runnable async trees. Trees are a web of interconn
 async def my_coroutine():
     return "result"
 
+
 root_node = Node(coroutine=my_coroutine, uuid="root")
 child_node = Node(coroutine=my_coroutine, uuid="child")
 
@@ -33,6 +34,7 @@ async def yielding_coroutine():
         yield f"progress {i}"
     yield "completed"
 
+
 node = Node(coroutine=yielding_coroutine)
 executor = TreeExecutor(roots=[node])
 
@@ -45,12 +47,7 @@ async for item in executor.yielding():
 
 **Evaluating coroutine kwargs during runtime (manual forwarding)**
 ```python
-node = Node(
-    coroutine=my_coroutine,
-    kwargs=dict(
-        my_arg=lambda: get_dynamic_value()
-    )
-)
+node = Node(coroutine=my_coroutine, kwargs=dict(my_arg=lambda: get_dynamic_value()))
 ```
 
 **Forwarding output between nodes (automatic forwarding)**
@@ -58,8 +55,10 @@ node = Node(
 async def producer():
     return "data"
 
+
 async def consumer(data: str):
     return f"processed_{data}"
+
 
 node_a = Node(coroutine=producer, uuid="producer")
 node_b = Node(coroutine=consumer, uuid="consumer")

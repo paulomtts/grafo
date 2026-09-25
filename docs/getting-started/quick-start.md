@@ -10,11 +10,14 @@ Create a simple tree with two nodes using automatic forwarding:
 import asyncio
 from grafo import Node, TreeExecutor
 
+
 async def greet():
     return "Hello"
 
+
 async def add_name(greeting: str):
     return f"{greeting}, World!"
+
 
 async def main():
     # Create nodes
@@ -29,6 +32,7 @@ async def main():
     await executor.run()
 
     print(node_b.output)  # "Hello, World!"
+
 
 asyncio.run(main())
 ```
@@ -48,8 +52,10 @@ Multiple branches execute in parallel:
 async def root_task():
     return "data"
 
+
 async def process(data: str, label: str):
     return f"{label}: {data}"
+
 
 root = Node(coroutine=root_task, uuid="root")
 branch_a = Node(coroutine=process, uuid="a", kwargs=dict(label="A"))
@@ -70,9 +76,11 @@ Stream intermediate results from async generators:
 ```python
 from grafo import Chunk
 
+
 async def counting_task():
     for i in range(3):
         yield f"Step {i}"
+
 
 node = Node(coroutine=counting_task, uuid="counter")
 executor = TreeExecutor(roots=[node])
@@ -92,14 +100,16 @@ Use lambdas for dynamic evaluation or transformations:
 async def producer():
     return "data"
 
+
 async def consumer(value: str):
     return value.upper()
+
 
 node_a = Node(coroutine=producer, uuid="producer")
 node_b = Node(
     coroutine=consumer,
     uuid="consumer",
-    kwargs=dict(value=lambda: node_a.output.upper())  # Transform on access
+    kwargs=dict(value=lambda: node_a.output.upper()),  # Transform on access
 )
 
 await node_a.connect(node_b)
@@ -112,6 +122,7 @@ Validate return types at runtime:
 ```python
 async def return_string():
     return "text"
+
 
 # Specify expected type - validates at runtime
 node = Node[str](coroutine=return_string, uuid="typed")

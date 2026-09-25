@@ -10,8 +10,10 @@ Specify parameter mapping when connecting:
 async def producer():
     return "data"
 
+
 async def consumer(input_data: str):
     return f"processed_{input_data}"
+
 
 node_a = Node(coroutine=producer, uuid="producer")
 node_b = Node(coroutine=consumer, uuid="consumer")
@@ -35,11 +37,14 @@ Each parent forwards to different parameters:
 async def get_name():
     return "alice"
 
+
 async def get_age():
     return 30
 
+
 async def create_profile(name: str, age: int):
     return {"name": name, "age": age}
+
 
 name_node = Node(coroutine=get_name, uuid="name")
 age_node = Node(coroutine=get_age, uuid="age")
@@ -59,7 +64,7 @@ node_b = Node(
     uuid="consumer",
     kwargs=dict(
         value=lambda: node_a.output  # Evaluated when node_b runs
-    )
+    ),
 )
 
 await node_a.connect(node_b)
@@ -73,11 +78,8 @@ Use `on_before_forward` callback:
 async def transform(value: Any) -> Any:
     return value.upper()
 
-await parent.connect(
-    child,
-    forward="data",
-    on_before_forward=transform
-)
+
+await parent.connect(child, forward="data", on_before_forward=transform)
 ```
 
 !!! info "How on_before_forward arguments work"
@@ -100,6 +102,7 @@ await parent.connect(child, forward="preset")  # Error!
 ```python
 async def consumer(expected_param: str):
     return expected_param
+
 
 # Correct
 await parent.connect(child, forward="expected_param")

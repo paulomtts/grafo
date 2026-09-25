@@ -18,6 +18,7 @@ The exception is not re-raised from `executor.run()`, but you can check `executo
 async def failing_task():
     raise ValueError("Something went wrong")
 
+
 node = Node(coroutine=failing_task, uuid="failer")
 executor = TreeExecutor(roots=[node])
 
@@ -84,8 +85,10 @@ Raised when attempting to forward output to a parameter that the child coroutine
 ```python
 from grafo.errors import ForwardingParameterError
 
+
 async def child_task(x: int):
     return x + 1
+
 
 child = Node(coroutine=child_task)
 try:
@@ -102,8 +105,10 @@ Raised when `Node.AUTO` forwarding cannot be resolved unambiguously because the 
 ```python
 from grafo.errors import AutoForwardError
 
+
 async def ambiguous_task(x: int, y: int):
     return x + y
+
 
 child = Node(coroutine=ambiguous_task)
 try:
@@ -120,8 +125,10 @@ Raised when a node's output type doesn't match its declared type parameter durin
 ```python
 from grafo.errors import MismatchChunkType
 
+
 async def returns_int():
     return 42
+
 
 node = Node[str](coroutine=returns_int, uuid="wrong")
 try:
@@ -137,8 +144,10 @@ Raised when calling a method that expects a specific coroutine type, but the nod
 ```python
 from grafo.errors import NotAsyncCallableError
 
+
 async def regular_coroutine():
     return "result"
+
 
 node = Node(coroutine=regular_coroutine, uuid="regular")
 try:

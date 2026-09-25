@@ -18,14 +18,17 @@ pip install grafo
 import asyncio
 from grafo import Node, TreeExecutor
 
+
 async def hello():
     return "Hello, Grafo!"
+
 
 async def main():
     node = Node(coroutine=hello, uuid="hello")
     executor = TreeExecutor(uuid="Test", roots=[node])
     await executor.run()
     print(node.output)  # Should print: Hello, Grafo!
+
 
 asyncio.run(main())
 ```

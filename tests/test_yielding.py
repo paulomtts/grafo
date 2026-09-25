@@ -1,14 +1,15 @@
 import asyncio
-import pytest
 
-from grafo import TreeExecutor, Node
-from grafo.components import Chunk
-from grafo._internal import logger
+import pytest
 from conftest import (
     create_node,
     mockup_coroutine,
     mockup_yielding_coroutine,
 )
+
+from grafo import Node, TreeExecutor
+from grafo._internal import logger
+from grafo.components import Chunk
 
 
 @pytest.mark.asyncio
@@ -189,4 +190,3 @@ async def test_yielding_mixing_results_and_chunks():
     logger.info(f"Completed nodes: {node_completions}")
     logger.info(f"Intermediate results count: {len(intermediate_results)}")
     logger.info(f"Total results: {len(results)}")
-
