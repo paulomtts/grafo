@@ -38,6 +38,7 @@ class TreeExecutor(Generic[N]):
         self._roots = roots or []
 
         self._workers = []
+        self._busy = 0  # ? REASON: workers currently inside node.run(), never removable
         self._output: list[Node[N]] = []
         self._errors = []
 
@@ -109,7 +110,11 @@ class TreeExecutor(Generic[N]):
                     f"Added {workers_to_add} workers. Current workers: {len(self._workers)}"
                 )
             else:
-                workers_to_remove = len(self._workers) - self._queue.qsize()
+                # ? REASON: a worker still inside node.run() is busy, not idle, and
+                # must never be targeted by a sentinel -- only the idle count is a
+                # safe upper bound on how many workers can exit right now.
+                idle = len(self._workers) - self._busy
+                workers_to_remove = max(0, idle - self._queue.qsize())
                 for _ in range(workers_to_remove):
                     self._queue.put_nowait(None)
                     self._workers.pop()
@@ -127,6 +132,7 @@ class TreeExecutor(Generic[N]):
                 self._queue.task_done()
                 break
 
+            self._busy += 1
             try:
                 # Run the node
                 logger.info(
@@ -157,6 +163,7 @@ class TreeExecutor(Generic[N]):
                 )
                 self._stop.set()
             finally:
+                self._busy -= 1  # before adjust, so this worker already reads as idle
                 self._queue.task_done()
                 self._enqueued_nodes.remove(node)
                 await self.__adjust_dynamic_workers(node)
